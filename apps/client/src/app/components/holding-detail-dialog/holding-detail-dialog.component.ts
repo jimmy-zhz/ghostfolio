@@ -116,6 +116,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
   public benchmarkDataItems: LineChartItem[];
   public benchmarkLabel = $localize`Average Unit Price`;
   public buyDateMarkers: LineChartItem[] = [];
+  public sellDateMarkers: LineChartItem[] = [];
   public countries: {
     [code: string]: { name: string; value: number };
   };
@@ -647,6 +648,13 @@ export class GfHoldingDetailDialogComponent implements OnInit {
 
         this.buyDateMarkers = activities
           .filter(({ type }) => type === 'BUY')
+          .map(({ date, unitPrice }) => ({
+            date: format(new Date(date), DATE_FORMAT),
+            value: unitPrice
+          }));
+
+        this.sellDateMarkers = activities
+          .filter(({ type }) => type === 'SELL')
           .map(({ date, unitPrice }) => ({
             date: format(new Date(date), DATE_FORMAT),
             value: unitPrice

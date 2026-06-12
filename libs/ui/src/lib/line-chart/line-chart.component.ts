@@ -1,46 +1,38 @@
-import {
-  getTooltipOptions,
-  getVerticalHoverLinePlugin
-} from '@ghostfolio/common/chart-helper';
+import { getTooltipOptions, getVerticalHoverLinePlugin } from '@ghostfolio/common/chart-helper';
 import { primaryColorRgb, secondaryColorRgb } from '@ghostfolio/common/config';
-import {
-  getBackgroundColor,
-  getDateFormatString,
-  getLocale,
-  getTextColor
-} from '@ghostfolio/common/helper';
+import { getBackgroundColor, getDateFormatString, getLocale, getTextColor } from '@ghostfolio/common/helper';
 import { LineChartItem } from '@ghostfolio/common/interfaces';
 import { ColorScheme } from '@ghostfolio/common/types';
 
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-  Component,
-  type ElementRef,
-  Input,
-  OnChanges,
-  OnDestroy,
-  SimpleChanges,
-  ViewChild
-} from '@angular/core';
-import {
-  type AnimationsSpec,
-  Chart,
-  Filler,
-  LinearScale,
-  LineController,
-  LineElement,
-  PointElement,
-  TimeScale,
-  Tooltip,
-  type TooltipOptions
-} from 'chart.js';
+
+
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, type ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
+import { type AnimationsSpec, Chart, Filler, LinearScale, LineController, LineElement, PointElement, TimeScale, Tooltip, type TooltipOptions } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import annotationPlugin, { type AnnotationOptions } from 'chartjs-plugin-annotation';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
+
+
 import { registerChartConfiguration } from '../chart';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +48,7 @@ export class GfLineChartComponent
   @Input() benchmarkLabel = '';
   @Input() buyDateMarkers: LineChartItem[] = [];
   @Input() colorScheme: ColorScheme;
+  @Input() sellDateMarkers: LineChartItem[] = [];
   @Input() currency: string;
   @Input() historicalDataItems: LineChartItem[];
   @Input() isAnimated = false;
@@ -114,10 +107,16 @@ export class GfLineChartComponent
 
         this.changeDetectorRef.markForCheck();
       });
-    } else if (changes['buyDateMarkers'] && this.chart) {
+    } else if (
+      (changes['buyDateMarkers'] || changes['sellDateMarkers']) &&
+      this.chart
+    ) {
       this.chart.options.plugins ??= {};
       this.chart.options.plugins.annotation = {
-        annotations: this.buildBuyDateMarkerAnnotations()
+        annotations: {
+          ...this.buildBuyDateMarkerAnnotations(),
+          ...this.buildSellDateMarkerAnnotations()
+        }
       };
       this.chart.update();
       this.changeDetectorRef.markForCheck();
@@ -191,6 +190,15 @@ export class GfLineChartComponent
       display: !this.isAnimated
     });
 
+    const sellDateMarkerAnnotations = this.buildSellDateMarkerAnnotations({
+      display: !this.isAnimated
+    });
+
+    const dateMarkerAnnotations = {
+      ...buyDateMarkerAnnotations,
+      ...sellDateMarkerAnnotations
+    };
+
     if (this.chartCanvas) {
       const animations = {
         x: this.getAnimationConfigurationForAxis({ labels, axis: 'x' }),
@@ -201,7 +209,7 @@ export class GfLineChartComponent
         this.chart.data = data;
         this.chart.options.plugins ??= {};
         this.chart.options.plugins.annotation = {
-          annotations: buyDateMarkerAnnotations
+          annotations: dateMarkerAnnotations
         };
         this.chart.options.plugins.tooltip =
           this.getTooltipPluginConfiguration();
@@ -229,7 +237,7 @@ export class GfLineChartComponent
             interaction: { intersect: false, mode: 'index' },
             plugins: {
               annotation: {
-                annotations: buyDateMarkerAnnotations
+                annotations: dateMarkerAnnotations
               },
               legend: {
                 align: 'start',
@@ -356,7 +364,37 @@ export class GfLineChartComponent
   private buildBuyDateMarkerAnnotations({
     display
   }: { display: boolean } = { display: true }): Record<string, AnnotationOptions> {
-    if (!this.buyDateMarkers?.length || !this.historicalDataItems?.length) {
+    return this.buildDateMarkerAnnotations({
+      backgroundColor: 'rgba(0,177,0,0.4)',
+      display,
+      keyPrefix: 'buyDateMarker',
+      markers: this.buyDateMarkers
+    });
+  }
+
+  private buildSellDateMarkerAnnotations({
+    display
+  }: { display: boolean } = { display: true }): Record<string, AnnotationOptions> {
+    return this.buildDateMarkerAnnotations({
+      backgroundColor: 'rgba(177,0,0,0.4)',
+      display,
+      keyPrefix: 'sellDateMarker',
+      markers: this.sellDateMarkers
+    });
+  }
+
+  private buildDateMarkerAnnotations({
+    backgroundColor,
+    display,
+    keyPrefix,
+    markers
+  }: {
+    backgroundColor: string;
+    display: boolean;
+    keyPrefix: string;
+    markers: LineChartItem[];
+  }): Record<string, AnnotationOptions> {
+    if (!markers?.length || !this.historicalDataItems?.length) {
       return {};
     }
 
@@ -367,7 +405,7 @@ export class GfLineChartComponent
       }
     }
 
-    return this.buyDateMarkers.reduce<Record<string, AnnotationOptions>>(
+    return markers.reduce<Record<string, AnnotationOptions>>(
       (acc, { date }, index) => {
         const yValue = priceByDate.get(date);
 
@@ -375,8 +413,8 @@ export class GfLineChartComponent
           return acc;
         }
 
-        acc[`buyDateMarker${index}`] = {
-          backgroundColor: 'rgba(177,0,0,0.4)',
+        acc[`${keyPrefix}${index}`] = {
+          backgroundColor,
           borderColor: 'rgb(255, 255, 255)',
           borderWidth: 1,
           display,
@@ -409,7 +447,10 @@ export class GfLineChartComponent
 
       this.chart.options.plugins ??= {};
       this.chart.options.plugins.annotation = {
-        annotations: this.buildBuyDateMarkerAnnotations({ display: true })
+        annotations: {
+          ...this.buildBuyDateMarkerAnnotations({ display: true }),
+          ...this.buildSellDateMarkerAnnotations({ display: true })
+        }
       };
       this.chart.update('none');
     }, this.ANIMATION_DURATION);
