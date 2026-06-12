@@ -648,7 +648,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
         this.buyDateMarkers = activities
           .filter(({ type }) => type === 'BUY')
           .map(({ date, unitPrice }) => ({
-            date: format(parseISO(date.toString()), DATE_FORMAT),
+            date: format(new Date(date), DATE_FORMAT),
             value: unitPrice
           }));
 

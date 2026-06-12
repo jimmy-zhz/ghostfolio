@@ -7,8 +7,7 @@ import {
   getBackgroundColor,
   getDateFormatString,
   getLocale,
-  getTextColor,
-  parseDate
+  getTextColor
 } from '@ghostfolio/common/helper';
 import { LineChartItem } from '@ghostfolio/common/interfaces';
 import { ColorScheme } from '@ghostfolio/common/types';
@@ -22,6 +21,7 @@ import {
   Input,
   OnChanges,
   OnDestroy,
+  SimpleChanges,
   ViewChild
 } from '@angular/core';
 import {
@@ -105,14 +105,21 @@ export class GfLineChartComponent
     }
   }
 
-  public ngOnChanges() {
-    if (this.historicalDataItems || this.historicalDataItems === null) {
+  public ngOnChanges(changes: SimpleChanges) {
+    if (changes['historicalDataItems']) {
       setTimeout(() => {
         // Wait for the chartCanvas
         this.initialize();
 
         this.changeDetectorRef.markForCheck();
       });
+    } else if (changes['buyDateMarkers'] && this.chart) {
+      this.chart.options.plugins ??= {};
+      this.chart.options.plugins.annotation = {
+        annotations: this.buildBuyDateMarkerAnnotations()
+      };
+      this.chart.update();
+      this.changeDetectorRef.markForCheck();
     }
   }
 
@@ -331,29 +338,42 @@ export class GfLineChartComponent
   }
 
   private buildBuyDateMarkerAnnotations(): Record<string, AnnotationOptions> {
-    return this.buyDateMarkers.reduce<Record<string, AnnotationOptions>>(
-      (acc, { date, value }, index) => {
-      const timestamp = parseDate(date)?.getTime();
+    if (!this.buyDateMarkers?.length || !this.historicalDataItems?.length) {
+      return {};
+    }
 
-      if (timestamp == null) {
-        return acc;
+    const priceByDate = new Map<string, number>();
+    for (const { date, value } of this.historicalDataItems) {
+      if (date != null && value != null) {
+        priceByDate.set(date, value);
       }
+    }
 
-      acc[`buyDateMarker${index}`] = {
-        backgroundColor: 'rgb(220, 53, 69)',
-        borderColor: 'rgb(255, 255, 255)',
-        borderWidth: 1,
-        pointStyle: 'circle',
-        radius: 4,
-        type: 'point',
-        xScaleID: 'x',
-        xValue: timestamp,
-        yScaleID: 'y',
-        yValue: value
-      };
+    return this.buyDateMarkers.reduce<Record<string, AnnotationOptions>>(
+      (acc, { date }, index) => {
+        const yValue = priceByDate.get(date);
 
-      return acc;
-    }, {});
+        if (yValue == null) {
+          return acc;
+        }
+
+        acc[`buyDateMarker${index}`] = {
+          backgroundColor: 'rgba(177,0,0,0.6)',
+          borderColor: 'rgb(255, 255, 255)',
+          borderWidth: 1,
+          pointStyle: 'circle',
+          radius: 4,
+          type: 'point',
+          xScaleID: 'x',
+          xValue: date,
+          yScaleID: 'y',
+          yValue
+        };
+
+        return acc;
+      },
+      {}
+    );
   }
 
   private getTooltipPluginConfiguration(): Partial<TooltipOptions<'line'>> {
