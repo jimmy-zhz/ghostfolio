@@ -226,38 +226,48 @@ export class MarketDataService {
 
   /**
    * Upsert market data by imitating missing upsertMany functionality
-   * with $transaction
+   * with $transaction in batches to avoid timeout
    */
   public async updateMany({
     data
   }: {
     data: Prisma.MarketDataUpdateInput[];
   }): Promise<MarketData[]> {
-    const upsertPromises = data.map(
-      ({ dataSource, date, marketPrice, symbol, state }) => {
-        return this.prismaService.marketData.upsert({
-          create: {
-            dataSource: dataSource as DataSource,
-            date: date as Date,
-            marketPrice: marketPrice as number,
-            state: state as MarketDataState,
-            symbol: symbol as string
-          },
-          update: {
-            marketPrice: marketPrice as number,
-            state: state as MarketDataState
-          },
-          where: {
-            dataSource_date_symbol: {
+    const BATCH_SIZE = 50;
+    const results: MarketData[] = [];
+
+    for (let i = 0; i < data.length; i += BATCH_SIZE) {
+      const batch = data.slice(i, i + BATCH_SIZE);
+
+      const upsertPromises = batch.map(
+        ({ dataSource, date, marketPrice, symbol, state }) => {
+          return this.prismaService.marketData.upsert({
+            create: {
               dataSource: dataSource as DataSource,
               date: date as Date,
+              marketPrice: marketPrice as number,
+              state: state as MarketDataState,
               symbol: symbol as string
+            },
+            update: {
+              marketPrice: marketPrice as number,
+              state: state as MarketDataState
+            },
+            where: {
+              dataSource_date_symbol: {
+                dataSource: dataSource as DataSource,
+                date: date as Date,
+                symbol: symbol as string
+              }
             }
-          }
-        });
-      }
-    );
+          });
+        }
+      );
 
-    return this.prismaService.$transaction(upsertPromises);
+      const batchResults = await this.prismaService.$transaction(upsertPromises);
+      results.push(...batchResults);
+    }
+
+    return results;
   }
 }
