@@ -7,7 +7,8 @@ import {
   getBackgroundColor,
   getDateFormatString,
   getLocale,
-  getTextColor
+  getTextColor,
+  parseDate
 } from '@ghostfolio/common/helper';
 import { LineChartItem } from '@ghostfolio/common/interfaces';
 import { ColorScheme } from '@ghostfolio/common/types';
@@ -36,6 +37,7 @@ import {
   type TooltipOptions
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import annotationPlugin, { type AnnotationOptions } from 'chartjs-plugin-annotation';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { registerChartConfiguration } from '../chart';
@@ -52,6 +54,7 @@ export class GfLineChartComponent
 {
   @Input() benchmarkDataItems: LineChartItem[] = [];
   @Input() benchmarkLabel = '';
+  @Input() buyDateMarkers: LineChartItem[] = [];
   @Input() colorScheme: ColorScheme;
   @Input() currency: string;
   @Input() historicalDataItems: LineChartItem[];
@@ -78,6 +81,7 @@ export class GfLineChartComponent
 
   public constructor(private changeDetectorRef: ChangeDetectorRef) {
     Chart.register(
+      annotationPlugin,
       Filler,
       LineController,
       LineElement,
@@ -181,6 +185,9 @@ export class GfLineChartComponent
       if (this.chart) {
         this.chart.data = data;
         this.chart.options.plugins ??= {};
+        this.chart.options.plugins.annotation = {
+          annotations: this.buildBuyDateMarkerAnnotations()
+        };
         this.chart.options.plugins.tooltip =
           this.getTooltipPluginConfiguration();
         this.chart.options.animations = this.isAnimated
@@ -202,6 +209,9 @@ export class GfLineChartComponent
             },
             interaction: { intersect: false, mode: 'index' },
             plugins: {
+              annotation: {
+                annotations: this.buildBuyDateMarkerAnnotations()
+              },
               legend: {
                 align: 'start',
                 display: this.showLegend,
@@ -318,6 +328,32 @@ export class GfLineChartComponent
       from: NaN,
       type: 'number'
     };
+  }
+
+  private buildBuyDateMarkerAnnotations(): Record<string, AnnotationOptions> {
+    return this.buyDateMarkers.reduce<Record<string, AnnotationOptions>>(
+      (acc, { date, value }, index) => {
+      const timestamp = parseDate(date)?.getTime();
+
+      if (timestamp == null) {
+        return acc;
+      }
+
+      acc[`buyDateMarker${index}`] = {
+        backgroundColor: 'rgb(220, 53, 69)',
+        borderColor: 'rgb(255, 255, 255)',
+        borderWidth: 1,
+        pointStyle: 'circle',
+        radius: 4,
+        type: 'point',
+        xScaleID: 'x',
+        xValue: timestamp,
+        yScaleID: 'y',
+        yValue: value
+      };
+
+      return acc;
+    }, {});
   }
 
   private getTooltipPluginConfiguration(): Partial<TooltipOptions<'line'>> {

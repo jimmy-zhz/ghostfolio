@@ -115,6 +115,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
   public averagePricePrecision = 2;
   public benchmarkDataItems: LineChartItem[];
   public benchmarkLabel = $localize`Average Unit Price`;
+  public buyDateMarkers: LineChartItem[] = [];
   public countries: {
     [code: string]: { name: string; value: number };
   };
@@ -643,6 +644,13 @@ export class GfHoldingDetailDialogComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ activities }) => {
         this.dataSource = new MatTableDataSource(activities);
+
+        this.buyDateMarkers = activities
+          .filter(({ type }) => type === 'BUY')
+          .map(({ date, unitPrice }) => ({
+            date: format(parseISO(date.toString()), DATE_FORMAT),
+            value: unitPrice
+          }));
 
         this.changeDetectorRef.markForCheck();
       });
