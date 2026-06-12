@@ -77,7 +77,8 @@ export class GfLineChartComponent
   public chart: Chart<'line'>;
   public isLoading = true;
 
-  private readonly ANIMATION_DURATION = 1200;
+  private annotationRevealTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly ANIMATION_DURATION = 800;
 
   public constructor(private changeDetectorRef: ChangeDetectorRef) {
     Chart.register(
@@ -124,6 +125,9 @@ export class GfLineChartComponent
   }
 
   public ngOnDestroy() {
+    if (this.annotationRevealTimer) {
+      clearTimeout(this.annotationRevealTimer);
+    }
     this.chart?.destroy();
   }
 
@@ -183,6 +187,10 @@ export class GfLineChartComponent
       ]
     };
 
+    const buyDateMarkerAnnotations = this.buildBuyDateMarkerAnnotations({
+      display: !this.isAnimated
+    });
+
     if (this.chartCanvas) {
       const animations = {
         x: this.getAnimationConfigurationForAxis({ labels, axis: 'x' }),
@@ -193,7 +201,7 @@ export class GfLineChartComponent
         this.chart.data = data;
         this.chart.options.plugins ??= {};
         this.chart.options.plugins.annotation = {
-          annotations: this.buildBuyDateMarkerAnnotations()
+          annotations: buyDateMarkerAnnotations
         };
         this.chart.options.plugins.tooltip =
           this.getTooltipPluginConfiguration();
@@ -202,6 +210,10 @@ export class GfLineChartComponent
           : undefined;
 
         this.chart.update();
+
+        if (this.isAnimated) {
+          this.scheduleAnnotationReveal();
+        }
       } else {
         this.chart = new Chart(this.chartCanvas.nativeElement, {
           data,
@@ -217,7 +229,7 @@ export class GfLineChartComponent
             interaction: { intersect: false, mode: 'index' },
             plugins: {
               annotation: {
-                annotations: this.buildBuyDateMarkerAnnotations()
+                annotations: buyDateMarkerAnnotations
               },
               legend: {
                 align: 'start',
@@ -306,6 +318,10 @@ export class GfLineChartComponent
           ],
           type: 'line'
         });
+
+        if (this.isAnimated) {
+          this.scheduleAnnotationReveal();
+        }
       }
     }
 
@@ -337,7 +353,9 @@ export class GfLineChartComponent
     };
   }
 
-  private buildBuyDateMarkerAnnotations(): Record<string, AnnotationOptions> {
+  private buildBuyDateMarkerAnnotations({
+    display
+  }: { display: boolean } = { display: true }): Record<string, AnnotationOptions> {
     if (!this.buyDateMarkers?.length || !this.historicalDataItems?.length) {
       return {};
     }
@@ -358,9 +376,10 @@ export class GfLineChartComponent
         }
 
         acc[`buyDateMarker${index}`] = {
-          backgroundColor: 'rgba(177,0,0,0.6)',
+          backgroundColor: 'rgba(177,0,0,0.4)',
           borderColor: 'rgb(255, 255, 255)',
           borderWidth: 1,
+          display,
           pointStyle: 'circle',
           radius: 4,
           type: 'point',
@@ -374,6 +393,26 @@ export class GfLineChartComponent
       },
       {}
     );
+  }
+
+  private scheduleAnnotationReveal() {
+    if (this.annotationRevealTimer) {
+      clearTimeout(this.annotationRevealTimer);
+    }
+
+    this.annotationRevealTimer = setTimeout(() => {
+      this.annotationRevealTimer = undefined;
+
+      if (!this.chart) {
+        return;
+      }
+
+      this.chart.options.plugins ??= {};
+      this.chart.options.plugins.annotation = {
+        annotations: this.buildBuyDateMarkerAnnotations({ display: true })
+      };
+      this.chart.update('none');
+    }, this.ANIMATION_DURATION);
   }
 
   private getTooltipPluginConfiguration(): Partial<TooltipOptions<'line'>> {

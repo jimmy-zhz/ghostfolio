@@ -9,7 +9,8 @@ npm run start:client
 
 方式1：使用预构建镜像（推荐生产环境）
 # 只启动服务，不需要 build
-docker compose -f docker/docker-compose.yml up -d
+`docker compose -f docker/docker-compose.build.yml up -d --build`  
+`docker compose -f docker/docker-compose.build.yml up -d`  
 
 方式2：本地构建
 # 先有 .env 文件，然后 build（但 build 不读取 .env）
