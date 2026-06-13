@@ -313,7 +313,8 @@ export class GfAppComponent implements OnInit {
             locale: this.user?.settings?.locale
           },
           height: this.deviceType === 'mobile' ? '98vh' : '80vh',
-          width: this.deviceType === 'mobile' ? '100vw' : '50rem'
+          // 弹窗宽度
+          width: this.deviceType === 'mobile' ? '100vw' : '75rem'
         });
 
         dialogRef
