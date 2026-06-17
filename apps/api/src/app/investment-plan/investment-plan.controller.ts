@@ -251,8 +251,8 @@ export class InvestmentPlanController {
           setTimeout(() => reject(new Error('getDetails timeout')), timeoutMs)
         )
       ]);
-      const holdings = (race as any).holdings ?? {};
-      const totalValue = Object.values(holdings).reduce(
+      const holdings: Record<string, any> = (race as any).holdings ?? {};
+      const totalValue: number = Object.values(holdings).reduce(
         (sum: number, h: any) => sum + (h.valueInBaseCurrency ?? 0),
         0
       );
