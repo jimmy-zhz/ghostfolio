@@ -1,0 +1,57 @@
+<div class="container">
+  <div class="mb-5 row">
+    <div class="col">
+      <h2 class="text-center" i18n>Model Provider</h2>
+      <mat-card appearance="outlined" class="my-3">
+        <mat-card-header>
+          <mat-card-title i18n>OpenRouter Configuration</mat-card-title>
+          <mat-card-subtitle>
+            <ng-container i18n
+              >LLM used for email content generation. Get an API Key
+              at</ng-container
+            >
+            <a href="https://openrouter.ai/keys" target="_blank">
+              openrouter.ai</a
+            >.
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="py-3">
+          <div class="d-flex flex-column gap-3">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>API Key</mat-label>
+              <input
+                matInput
+                type="password"
+                [placeholder]="
+                  aiConfig.hasApiKey ? configuredPlaceholder : emptyPlaceholder
+                "
+                [(ngModel)]="openRouterApiKey"
+              />
+              @if (aiConfig.hasApiKey) {
+                <mat-hint i18n
+                  >Key configured (ending: {{ aiConfig.apiKey }})</mat-hint
+                >
+              }
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Model</mat-label>
+              <input
+                matInput
+                placeholder="e.g. anthropic/claude-sonnet-4-6 or openai/gpt-4o"
+                [(ngModel)]="openRouterModel"
+              />
+              <mat-hint i18n
+                >Leave blank to use the OpenRouter default model</mat-hint
+              >
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+        <mat-card-actions class="pb-3 pt-0 px-3">
+          <button color="primary" mat-flat-button (click)="onSaveAiConfig()">
+            <ng-container i18n>Save Configuration</ng-container>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+</div>

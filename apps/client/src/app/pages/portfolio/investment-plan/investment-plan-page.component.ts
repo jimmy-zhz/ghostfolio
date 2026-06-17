@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -43,6 +44,7 @@ interface DcaSchedule {
   imports: [
     CommonModule,
     FormsModule,
+    MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
     MatCheckboxModule,
@@ -59,8 +61,13 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   public allocations: Allocation[] = [];
   public dcaSchedules: DcaSchedule[] = [];
   public emailEnabled = false;
+  public holdingSymbols: string[] = [];
   public isLoading = true;
-  public newAllocation: Allocation = { rebalanceThreshold: 5, symbol: '', targetWeight: 0 };
+  public newAllocation: Allocation = {
+    rebalanceThreshold: 5,
+    symbol: '',
+    targetWeight: 0
+  };
   public newDca: DcaSchedule = {
     deadlineDay: 5,
     signalType: 'MA5',
@@ -69,13 +76,22 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     type: 'ADD_POSITION',
     weeklyBudget: 200
   };
-  public plan: { capitalPool: number; deployedCapital: number; notifyEmail: string; notifyLanguage: string } = {
+  public plan: {
+    capitalPool: number;
+    deployedCapital: number;
+    notifyEmail: string;
+    notifyLanguage: string;
+  } = {
     capitalPool: 0,
     deployedCapital: 0,
     notifyEmail: '',
     notifyLanguage: 'zh'
   };
-  public rebalancingResult: { actions: any[]; hasTriggered: boolean; totalValue: number } | null = null;
+  public rebalancingResult: {
+    actions: any[];
+    hasTriggered: boolean;
+    totalValue: number;
+  } | null = null;
   public signals: any[] = [];
   public totalAllocationWeight = 0;
 
@@ -86,9 +102,17 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   ) {}
 
   public ngOnInit() {
+    this.loadHoldingSymbols();
     this.loadPlan();
     this.loadSignals();
     this.loadRebalancing();
+  }
+
+  public filterSymbols(input: string): string[] {
+    const q = (input ?? '').toUpperCase();
+    return q
+      ? this.holdingSymbols.filter((s) => s.toUpperCase().includes(q))
+      : this.holdingSymbols;
   }
 
   public onSavePlan() {
@@ -99,7 +123,8 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   }
 
   public onAddAllocation() {
-    if (!this.newAllocation.symbol || this.newAllocation.targetWeight <= 0) return;
+    if (!this.newAllocation.symbol || this.newAllocation.targetWeight <= 0)
+      return;
     this.dataService
       .putInvestmentPlanAllocation(this.newAllocation.symbol, {
         rebalanceThreshold: this.newAllocation.rebalanceThreshold,
@@ -107,7 +132,11 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.newAllocation = { rebalanceThreshold: 5, symbol: '', targetWeight: 0 };
+        this.newAllocation = {
+          rebalanceThreshold: 5,
+          symbol: '',
+          targetWeight: 0
+        };
         this.loadPlan();
         this.loadRebalancing();
       });
@@ -170,6 +199,24 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       REBALANCE_SELL: '🔴 再平衡卖出'
     };
     return map[type] ?? type;
+  }
+
+  private loadHoldingSymbols() {
+    this.dataService
+      .fetchPortfolioHoldings()
+      .pipe(
+        catchError(() => of({ holdings: [] })),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ holdings }) => {
+        this.holdingSymbols = holdings
+          .filter(
+            ({ assetProfile }) => !['CASH'].includes(assetProfile.assetSubClass)
+          )
+          .map(({ assetProfile }) => assetProfile.symbol)
+          .sort();
+        this.changeDetectorRef.markForCheck();
+      });
   }
 
   private loadPlan() {

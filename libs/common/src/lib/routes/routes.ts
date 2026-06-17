@@ -50,6 +50,11 @@ export const internalRoutes = {
         routerLink: ['/admin', 'market-data'],
         title: $localize`Market Data`
       },
+      modelProvider: {
+        path: 'model-provider',
+        routerLink: ['/admin', 'model-provider'],
+        title: $localize`Model Provider`
+      },
       settings: {
         path: 'settings',
         routerLink: ['/admin', 'settings'],

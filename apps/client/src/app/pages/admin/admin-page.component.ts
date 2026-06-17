@@ -7,6 +7,7 @@ import {
 import { Component, OnInit } from '@angular/core';
 import { addIcons } from 'ionicons';
 import {
+  cogOutline,
   flashOutline,
   peopleOutline,
   readerOutline,
@@ -26,6 +27,7 @@ export class AdminPageComponent implements OnInit {
 
   public constructor() {
     addIcons({
+      cogOutline,
       flashOutline,
       peopleOutline,
       readerOutline,
@@ -55,6 +57,12 @@ export class AdminPageComponent implements OnInit {
         iconName: 'flash-outline',
         label: internalRoutes.adminControl.subRoutes.jobs.title,
         routerLink: internalRoutes.adminControl.subRoutes.jobs.routerLink
+      },
+      {
+        iconName: 'cog-outline',
+        label: internalRoutes.adminControl.subRoutes.modelProvider.title,
+        routerLink:
+          internalRoutes.adminControl.subRoutes.modelProvider.routerLink
       },
       {
         iconName: 'people-outline',

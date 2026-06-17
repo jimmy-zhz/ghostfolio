@@ -1,5 +1,6 @@
 import { GfAdminJobsComponent } from '@ghostfolio/client/components/admin-jobs/admin-jobs.component';
 import { GfAdminMarketDataComponent } from '@ghostfolio/client/components/admin-market-data/admin-market-data.component';
+import { GfAdminModelProviderComponent } from '@ghostfolio/client/components/admin-model-provider/admin-model-provider.component';
 import { GfAdminOverviewComponent } from '@ghostfolio/client/components/admin-overview/admin-overview.component';
 import { GfAdminSettingsComponent } from '@ghostfolio/client/components/admin-settings/admin-settings.component';
 import { GfAdminUsersComponent } from '@ghostfolio/client/components/admin-users/admin-users.component';
@@ -28,6 +29,11 @@ export const routes: Routes = [
         path: internalRoutes.adminControl.subRoutes.marketData.path,
         component: GfAdminMarketDataComponent,
         title: internalRoutes.adminControl.subRoutes.marketData.title
+      },
+      {
+        path: internalRoutes.adminControl.subRoutes.modelProvider.path,
+        component: GfAdminModelProviderComponent,
+        title: internalRoutes.adminControl.subRoutes.modelProvider.title
       },
       {
         path: internalRoutes.adminControl.subRoutes.settings.path,
