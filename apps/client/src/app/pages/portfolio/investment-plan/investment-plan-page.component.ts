@@ -63,7 +63,7 @@ export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
   templateUrl: './investment-plan-page.component.html'
 })
 export class GfInvestmentPlanPageComponent implements OnInit {
-  public activeTab: InvestmentPlanTab = 'settings';
+  public activeTab: InvestmentPlanTab = 'rebalancing';
   public allocationSymbolControl = new FormControl<LookupItem | null>(null);
   public allocations: Allocation[] = [];
   public dcaSchedules: DcaSchedule[] = [];
