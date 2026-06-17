@@ -2,6 +2,53 @@
   <div class="row">
     <div class="col">
       <h1 class="d-none d-sm-block h3 mb-3 text-center" i18n>Activities</h1>
+
+      <!-- Filter bar -->
+      <form [formGroup]="filterForm" class="activities-filter-bar mb-3">
+        <mat-form-field appearance="outline" class="filter-field without-hint">
+          <mat-label i18n>Name</mat-label>
+          <mat-select formControlName="symbols" multiple (selectionChange)="onFilterChanged()">
+            @for (h of holdingOptions; track h.symbol) {
+              <mat-option [value]="h.symbol">{{ h.symbol }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field without-hint">
+          <mat-label i18n>Type</mat-label>
+          <mat-select formControlName="type" (selectionChange)="onFilterChanged()">
+            <mat-option [value]="null" i18n>All</mat-option>
+            @for (t of activityTypeOptions; track t.key) {
+              <mat-option [value]="t.key">{{ t.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field filter-field--date without-hint">
+          <mat-label i18n>Date range</mat-label>
+          <mat-date-range-input [rangePicker]="picker">
+            <input matStartDate formControlName="startDate" (dateChange)="onFilterChanged()" />
+            <input matEndDate formControlName="endDate" (dateChange)="onFilterChanged()" />
+          </mat-date-range-input>
+          <mat-datepicker-toggle matIconSuffix [for]="picker" />
+          <mat-date-range-picker #picker />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field without-hint">
+          <mat-label i18n>Account</mat-label>
+          <mat-select formControlName="accountId" (selectionChange)="onFilterChanged()">
+            <mat-option [value]="null" i18n>All</mat-option>
+            @for (a of accountOptions; track a.id) {
+              <mat-option [value]="a.id">{{ a.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-stroked-button type="button" class="filter-clear-btn" (click)="onClearFilters()" i18n>
+          Clear
+        </button>
+      </form>
+
       <gf-activities-table
         [baseCurrency]="user?.settings?.baseCurrency"
         [dataSource]="dataSource"

@@ -1,3 +1,24 @@
 :host {
   display: block;
 }
+
+.activities-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+
+  .filter-field {
+    width: 180px;
+
+    &--date {
+      width: 220px;
+    }
+  }
+
+  .filter-clear-btn {
+    height: 42px;
+    min-width: 100px;
+    align-self: flex-start;
+  }
+}

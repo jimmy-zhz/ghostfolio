@@ -1,9 +1,6 @@
 import { IcsService } from '@ghostfolio/client/services/ics/ics.service';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
-import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
-import { downloadAsFile } from '@ghostfolio/common/helper';
 import {
   Activity,
   AssetProfileIdentifier,
@@ -22,15 +19,25 @@ import {
   OnInit
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Sort, SortDirection } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { Type as ActivityType } from '@prisma/client';
 import { format, parseISO } from 'date-fns';
 import { DeviceDetectorService } from 'ngx-device-detector';
+import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
+import { downloadAsFile } from '@ghostfolio/common/helper';
 import { Subscription } from 'rxjs';
+import { translate } from '@ghostfolio/ui/i18n';
 
 import { GfCreateOrUpdateActivityDialogComponent } from './create-or-update-activity-dialog/create-or-update-activity-dialog.component';
 import { CreateOrUpdateActivityDialogParams } from './create-or-update-activity-dialog/interfaces/interfaces';
@@ -41,7 +48,13 @@ import { ImportActivitiesDialogParams } from './import-activities-dialog/interfa
   imports: [
     GfActivitiesTableComponent,
     GfFabComponent,
+    MatButtonModule,
+    MatDatepickerModule,
+    MatFormFieldModule,
+    MatNativeDateModule,
+    MatSelectModule,
     MatSnackBarModule,
+    ReactiveFormsModule,
     RouterModule
   ],
   selector: 'gf-activities-page',
@@ -50,13 +63,17 @@ import { ImportActivitiesDialogParams } from './import-activities-dialog/interfa
 })
 export class GfActivitiesPageComponent implements OnInit {
   public activityTypesFilter: string[] = [];
+  public activityTypeOptions: { key: ActivityType; label: string }[] = [];
+  public accountOptions: { id: string; name: string }[] = [];
   public dataSource: MatTableDataSource<Activity>;
   public deviceType: string;
+  public filterForm: FormGroup;
   public hasImpersonationId: boolean;
   public hasPermissionToCreateActivity: boolean;
   public hasPermissionToDeleteActivity: boolean;
+  public holdingOptions: { symbol: string; name: string }[] = [];
   public pageIndex = 0;
-  public pageSize = DEFAULT_PAGE_SIZE;
+  public pageSize = 20;
   public routeQueryParams: Subscription;
   public sortColumn = 'date';
   public sortDirection: SortDirection = 'desc';
@@ -69,6 +86,7 @@ export class GfActivitiesPageComponent implements OnInit {
     private destroyRef: DestroyRef,
     private deviceDetectorService: DeviceDetectorService,
     private dialog: MatDialog,
+    private fb: FormBuilder,
     private icsService: IcsService,
     private impersonationStorageService: ImpersonationStorageService,
     private route: ActivatedRoute,
@@ -107,6 +125,19 @@ export class GfActivitiesPageComponent implements OnInit {
   public ngOnInit() {
     this.deviceType = this.deviceDetectorService.getDeviceInfo().deviceType;
 
+    this.filterForm = this.fb.group({
+      symbols: [[]],
+      type: [null],
+      startDate: [null],
+      endDate: [null],
+      accountId: [null]
+    });
+
+    for (const type of Object.keys(ActivityType) as ActivityType[]) {
+      this.activityTypeOptions.push({ key: type, label: translate(type) });
+    }
+    this.activityTypeOptions.sort((a, b) => a.label.localeCompare(b.label));
+
     this.impersonationStorageService
       .onChangeHasImpersonation()
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -119,6 +150,24 @@ export class GfActivitiesPageComponent implements OnInit {
       .subscribe((state) => {
         if (state?.user) {
           this.updateUser(state.user);
+
+          this.accountOptions = (this.user.accounts ?? []).map((a) => ({
+            id: a.id,
+            name: a.name
+          }));
+
+          this.dataService
+            .fetchPortfolioHoldings()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((response) => {
+              this.holdingOptions = (response.holdings ?? [])
+                .map((h) => ({
+                  symbol: h.assetProfile.symbol,
+                  name: h.assetProfile.name ?? h.assetProfile.symbol
+                }))
+                .sort((a, b) => a.symbol.localeCompare(b.symbol));
+              this.changeDetectorRef.markForCheck();
+            });
 
           this.fetchActivities();
 
@@ -135,16 +184,34 @@ export class GfActivitiesPageComponent implements OnInit {
     const dateRange = this.user?.settings?.dateRange;
     const range = this.isCalendarYear(dateRange) ? dateRange : undefined;
 
+    const filterValues = this.filterForm?.value ?? {};
+    const selectedSymbols: string[] = filterValues.symbols ?? [];
+    const selectedType: string = filterValues.type ?? null;
+    const startDate: Date = filterValues.startDate ?? null;
+    const endDate: Date = filterValues.endDate ?? null;
+    const selectedAccountId: string = filterValues.accountId ?? null;
+
+    const extraFilters = this.userService.getFilters();
+    if (selectedAccountId) {
+      extraFilters.push({ id: selectedAccountId, type: 'ACCOUNT' });
+    }
+
     this.dataService
       .fetchActivities({
         range,
-        activityTypes: this.activityTypesFilter.length
-          ? this.activityTypesFilter
-          : undefined,
-        filters: this.userService.getFilters(),
+        activityTypes:
+          selectedType
+            ? [selectedType]
+            : this.activityTypesFilter.length
+              ? this.activityTypesFilter
+              : undefined,
+        endDate: endDate ?? undefined,
+        filters: extraFilters,
         skip: this.pageIndex * this.pageSize,
         sortColumn: this.sortColumn,
         sortDirection: this.sortDirection,
+        startDate: startDate ?? undefined,
+        symbols: selectedSymbols.length ? selectedSymbols : undefined,
         take: this.pageSize
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -328,6 +395,17 @@ export class GfActivitiesPageComponent implements OnInit {
     this.sortColumn = active;
     this.sortDirection = direction;
 
+    this.fetchActivities();
+  }
+
+  public onFilterChanged() {
+    this.pageIndex = 0;
+    this.fetchActivities();
+  }
+
+  public onClearFilters() {
+    this.filterForm.reset({ symbols: [], type: null, startDate: null, endDate: null, accountId: null });
+    this.pageIndex = 0;
     this.fetchActivities();
   }
 

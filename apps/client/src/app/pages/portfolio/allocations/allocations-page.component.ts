@@ -108,6 +108,7 @@ export class GfAllocationsPageComponent implements OnInit {
   public symbols: {
     [name: string]: {
       dataSource?: DataSource;
+      investment: number;
       name: string;
       symbol: string;
       value: number;
@@ -293,6 +294,7 @@ export class GfAllocationsPageComponent implements OnInit {
     };
     this.symbols = {
       [UNKNOWN_KEY]: {
+        investment: 0,
         name: UNKNOWN_KEY,
         symbol: UNKNOWN_KEY,
         value: 0
@@ -471,6 +473,7 @@ export class GfAllocationsPageComponent implements OnInit {
 
       this.symbols[prettifySymbol(symbol)] = {
         dataSource: position.assetProfile.dataSource,
+        investment: position.investment ?? 0,
         name: position.assetProfile.name,
         symbol: prettifySymbol(symbol),
         value: isNumber(position.valueInBaseCurrency)
@@ -614,6 +617,7 @@ export class GfAllocationsPageComponent implements OnInit {
     symbol: string;
     name: string;
     percentage: number;
+    investment: number;
   }[] {
     if (!this.symbols) {
       return [];
@@ -624,7 +628,8 @@ export class GfAllocationsPageComponent implements OnInit {
       .map((e) => ({
         symbol: e.symbol,
         name: e.name,
-        percentage: total > 0 ? (e.value / total) * 100 : 0
+        percentage: total > 0 ? (e.value / total) * 100 : 0,
+        investment: e.investment ?? 0
       }))
       .sort((a, b) => b.percentage - a.percentage);
   }

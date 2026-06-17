@@ -518,6 +518,7 @@ export class ActivitiesService {
     sortColumn,
     sortDirection = 'asc',
     startDate,
+    symbols,
     take = Number.MAX_SAFE_INTEGER,
     types,
     userCurrency,
@@ -531,6 +532,7 @@ export class ActivitiesService {
     sortColumn?: string;
     sortDirection?: Prisma.SortOrder;
     startDate?: Date;
+    symbols?: string[];
     take?: number;
     types?: ActivityType[];
     userCurrency: string;
@@ -614,6 +616,19 @@ export class ActivitiesService {
           }
         ]
       };
+    }
+
+    if (symbols?.length > 0) {
+      const symbolCondition: Prisma.SymbolProfileWhereInput = {
+        symbol: { in: symbols }
+      };
+      if (where.SymbolProfile) {
+        where.SymbolProfile = {
+          AND: [where.SymbolProfile, symbolCondition]
+        };
+      } else {
+        where.SymbolProfile = symbolCondition;
+      }
     }
 
     if (filterByDataSource && filterBySymbol) {

@@ -111,11 +111,14 @@ export class ActivitiesController {
     @Query('activityTypes') filterByTypes?: string,
     @Query('assetClasses') filterByAssetClasses?: string,
     @Query('dataSource') filterByDataSource?: string,
+    @Query('endDate') endDateParam?: string,
     @Query('range') dateRange?: DateRange,
     @Query('skip') skip?: number,
     @Query('sortColumn') sortColumn?: string,
     @Query('sortDirection') sortDirection?: Prisma.SortOrder,
+    @Query('startDate') startDateParam?: string,
     @Query('symbol') filterBySymbol?: string,
+    @Query('symbols') filterBySymbols?: string,
     @Query('tags') filterByTags?: string,
     @Query('take') take?: number
   ): Promise<ActivitiesResponse> {
@@ -124,6 +127,13 @@ export class ActivitiesController {
 
     if (dateRange) {
       ({ endDate, startDate } = getIntervalFromDateRange({ dateRange }));
+    } else {
+      if (startDateParam) {
+        startDate = parseISO(startDateParam);
+      }
+      if (endDateParam) {
+        endDate = parseISO(endDateParam);
+      }
     }
 
     const filters = this.apiService.buildFiltersFromQueryParams({
@@ -138,6 +148,7 @@ export class ActivitiesController {
       await this.impersonationService.validateImpersonationId(impersonationId);
 
     const types = (filterByTypes?.split(',') as ActivityType[]) ?? [];
+    const symbols = filterBySymbols?.split(',').filter(Boolean) ?? [];
 
     const userCurrency = this.request.user.settings.settings.baseCurrency;
 
@@ -147,6 +158,7 @@ export class ActivitiesController {
       sortColumn,
       sortDirection,
       startDate,
+      symbols,
       types,
       userCurrency,
       includeDrafts: true,

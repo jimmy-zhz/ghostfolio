@@ -187,8 +187,8 @@
                     class="d-flex align-items-center py-2 border-bottom gap-3"
                   >
                     <!-- Symbol + weight arrow -->
-                    <div style="min-width: 180px">
-                      <strong>{{ action.symbol }}</strong>
+                    <div style="min-width: 180px;">
+                      <strong style=" margin-right: 2px;">{{ action.symbol }}</strong>
                       <span class="text-muted ms-2 small"
                         >{{ action.currentWeight | number: '1.0-1' }}% → {{ action.targetWeight }}%</span
                       >
@@ -202,7 +202,7 @@
                     <!-- Action -->
                     <div class="ms-auto d-flex align-items-center gap-2">
                       @if (action.type === 'BUY') {
-                        <span class="text-success">Buy ${{ action.amount | number: '1.0-0' }}</span>
+                        <span class="text-success" style=" margin-right: 5px;">Buy ${{ action.amount | number: '1.0-0' }}</span>
                         <button
                           class="dca-shortcut-btn"
                           mat-stroked-button
@@ -241,12 +241,11 @@
                     >
                   </div>
                   <button
-                    class="flex-shrink-0"
-                    color="warn"
                     mat-icon-button
+                    style="margin-right: 10px; width:100px; font-size:16px; color:red"
                     (click)="onDeleteAllocation(a.symbol)"
                   >
-                    <mat-icon>delete</mat-icon>
+                    delete
                   </button>
                 </div>
               }

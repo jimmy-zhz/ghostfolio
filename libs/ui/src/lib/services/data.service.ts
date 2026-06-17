@@ -210,25 +210,35 @@ export class DataService {
 
   public fetchActivities({
     activityTypes,
+    endDate,
     filters,
     range,
     skip,
     sortColumn,
     sortDirection,
+    startDate,
+    symbols,
     take
   }: {
     activityTypes?: string[];
+    endDate?: Date;
     filters?: Filter[];
     range?: DateRange;
     skip?: number;
     sortColumn?: string;
     sortDirection?: SortDirection;
+    startDate?: Date;
+    symbols?: string[];
     take?: number;
   }): Observable<ActivitiesResponse> {
     let params = this.buildFiltersAsQueryParams({ filters });
 
     if (activityTypes?.length) {
       params = params.append('activityTypes', activityTypes.join(','));
+    }
+
+    if (endDate) {
+      params = params.append('endDate', format(endDate, DATE_FORMAT));
     }
 
     if (range) {
@@ -245,6 +255,14 @@ export class DataService {
 
     if (sortDirection) {
       params = params.append('sortDirection', sortDirection);
+    }
+
+    if (startDate) {
+      params = params.append('startDate', format(startDate, DATE_FORMAT));
+    }
+
+    if (symbols?.length) {
+      params = params.append('symbols', symbols.join(','));
     }
 
     if (take) {
