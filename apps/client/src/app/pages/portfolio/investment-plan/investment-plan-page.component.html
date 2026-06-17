@@ -63,7 +63,7 @@
                   matInput
                   readonly
                   type="number"
-                  [value]="plan.deployedCapital"
+                  [value]="plan.deployedCapital | number: '1.2-2'"
                 />
                 <mat-hint i18n>Auto-calculated from your transaction history</mat-hint>
               </mat-form-field>
@@ -105,8 +105,8 @@
 
       <div class="row mt-3">
         <div class="col text-end">
-          <button color="primary" mat-flat-button (click)="onSavePlan()" i18n>
-            Save settings
+          <button color="primary" mat-flat-button [disabled]="isSaving" (click)="onSavePlan()">
+            {{ isSaving ? 'Saving...' : 'Save settings' }}
           </button>
         </div>
       </div>

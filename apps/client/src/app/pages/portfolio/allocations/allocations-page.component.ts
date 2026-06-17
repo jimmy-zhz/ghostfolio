@@ -479,6 +479,10 @@ export class GfAllocationsPageComponent implements OnInit {
       };
     }
 
+    if ((this.symbols[UNKNOWN_KEY]?.value ?? 0) < 0.01) {
+      delete this.symbols[UNKNOWN_KEY];
+    }
+
     this.markets = this.portfolioDetails.markets;
 
     Object.values(this.portfolioDetails.marketsAdvanced).forEach(

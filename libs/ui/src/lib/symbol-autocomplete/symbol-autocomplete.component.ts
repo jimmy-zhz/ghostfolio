@@ -196,6 +196,18 @@ export class GfSymbolAutocompleteComponent
     }
   }
 
+  public onBlur() {
+    const typed = this.control.value;
+    if (!super.value && typeof typed === 'string' && typed.length > 0) {
+      const match = this.lookupItems.find(
+        (item) => item.symbol.toUpperCase() === typed.toUpperCase()
+      );
+      if (match) {
+        super.value = { dataSource: match.dataSource, symbol: match.symbol } as LookupItem;
+      }
+    }
+  }
+
   public onUpdateSymbol(event: MatAutocompleteSelectedEvent) {
     super.value = {
       dataSource: event.option.value.dataSource,

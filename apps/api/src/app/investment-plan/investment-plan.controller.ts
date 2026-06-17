@@ -11,7 +11,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpException,
   Inject,
   Param,
   Post,
@@ -21,7 +20,6 @@ import {
 import { REQUEST } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { DcaSignalType, DcaType } from '@prisma/client';
-import { StatusCodes } from 'http-status-codes';
 
 import { InvestmentPlanService } from './investment-plan.service';
 
@@ -271,9 +269,9 @@ export class InvestmentPlanController {
       this.request.user.id
     );
     if (existing) return existing;
-    throw new HttpException(
-      'Investment plan not found. Please create one first.',
-      StatusCodes.NOT_FOUND
-    );
+    await this.investmentPlanService.upsertPlan(this.request.user.id, {
+      capitalPool: 0
+    });
+    return this.investmentPlanService.getPlanByUserId(this.request.user.id);
   }
 }

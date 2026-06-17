@@ -19,6 +19,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { catchError, of, timeout } from 'rxjs';
 
 interface Allocation {
@@ -54,6 +55,7 @@ export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    MatSnackBarModule,
     ReactiveFormsModule
   ],
   selector: 'gf-investment-plan-page',
@@ -101,10 +103,13 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   public signals: any[] = [];
   public totalAllocationWeight = 0;
 
+  public isSaving = false;
+
   public constructor(
     private readonly changeDetectorRef: ChangeDetectorRef,
     private readonly dataService: DataService,
-    private readonly destroyRef: DestroyRef
+    private readonly destroyRef: DestroyRef,
+    private readonly snackBar: MatSnackBar
   ) {}
 
   public ngOnInit() {
@@ -119,10 +124,24 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   }
 
   public onSavePlan() {
+    this.isSaving = true;
+    this.changeDetectorRef.markForCheck();
     this.dataService
       .putInvestmentPlan({ ...this.plan, emailEnabled: this.emailEnabled })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadPlan());
+      .subscribe({
+        next: () => {
+          this.isSaving = false;
+          this.loadPlan();
+          this.snackBar.open('Settings saved', undefined, { duration: 3000 });
+          this.changeDetectorRef.markForCheck();
+        },
+        error: () => {
+          this.isSaving = false;
+          this.snackBar.open('Failed to save settings', undefined, { duration: 3000 });
+          this.changeDetectorRef.markForCheck();
+        }
+      });
   }
 
   public onAddAllocation() {
