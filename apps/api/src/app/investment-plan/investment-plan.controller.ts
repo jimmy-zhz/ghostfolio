@@ -174,12 +174,20 @@ export class InvestmentPlanController {
       this.request.user.id
     );
     if (!plan) return { actions: [], hasTriggered: false, totalValue: 0 };
-    const { holdings } = await this.portfolioService.getDetails({
-      filters: [],
-      impersonationId: undefined,
-      userId: this.request.user.id,
-      withMarkets: false
-    });
+
+    let holdings: Record<string, any> = {};
+    try {
+      const result = await this.portfolioService.getDetails({
+        filters: [],
+        impersonationId: undefined,
+        userId: this.request.user.id,
+        withMarkets: false
+      });
+      holdings = result.holdings ?? {};
+    } catch {
+      // return safe empty result if portfolio data is unavailable
+    }
+
     return this.rebalancingService.calculateRebalancing(
       plan.allocations,
       holdings
