@@ -62,7 +62,7 @@
                 <input
                   matInput
                   readonly
-                  type="number"
+                  type="text"
                   [value]="plan.deployedCapital | number: '1.2-2'"
                 />
                 <mat-hint i18n>Auto-calculated from your transaction history</mat-hint>
@@ -188,7 +188,7 @@
                   >
                     <div>
                       <strong>{{ action.symbol }}</strong>
-                      <span class="text-muted ms-1"
+                      <span class="text-muted ms-3"
                         >{{ action.currentWeight | number: '1.0-1' }}% →
                         {{ action.targetWeight }}%</span
                       >
@@ -243,6 +243,7 @@
                     >
                   </div>
                   <button
+                    class="flex-shrink-0 me-n2"
                     color="warn"
                     mat-icon-button
                     (click)="onDeleteAllocation(a.symbol)"
