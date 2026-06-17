@@ -103,6 +103,11 @@ export class ConfigurationService {
       ROOT_URL: url({
         default: environment.rootUrl
       }),
+      SMTP_FROM: str({ default: '' }),
+      SMTP_HOST: str({ default: 'smtp.gmail.com' }),
+      SMTP_PASS: str({ default: '' }),
+      SMTP_PORT: port({ default: 587 }),
+      SMTP_USER: str({ default: '' }),
       STRIPE_SECRET_KEY: str({ default: '' }),
       TWITTER_ACCESS_TOKEN: str({ default: 'dummyAccessToken' }),
       TWITTER_ACCESS_TOKEN_SECRET: str({ default: 'dummyAccessTokenSecret' }),

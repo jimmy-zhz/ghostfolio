@@ -1,4 +1,6 @@
+import { InvestmentPlanModule } from '@ghostfolio/api/app/investment-plan/investment-plan.module';
 import { UserModule } from '@ghostfolio/api/app/user/user.module';
+import { MailModule } from '@ghostfolio/api/services/mail/mail.module';
 import { ConfigurationModule } from '@ghostfolio/api/services/configuration/configuration.module';
 import { ExchangeRateDataModule } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.module';
 import { PropertyModule } from '@ghostfolio/api/services/property/property.module';
@@ -13,6 +15,8 @@ import { CronService } from './cron.service';
 @Module({
   imports: [
     ConfigurationModule,
+    InvestmentPlanModule,
+    MailModule,
     DataGatheringQueueModule,
     ExchangeRateDataModule,
     PropertyModule,

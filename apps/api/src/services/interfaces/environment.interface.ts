@@ -53,6 +53,11 @@ export interface Environment extends CleanedEnvAccessors {
   REDIS_PORT: number;
   REQUEST_TIMEOUT: number;
   ROOT_URL: string;
+  SMTP_FROM: string;
+  SMTP_HOST: string;
+  SMTP_PASS: string;
+  SMTP_PORT: number;
+  SMTP_USER: string;
   STRIPE_SECRET_KEY: string;
   TWITTER_ACCESS_TOKEN: string;
   TWITTER_ACCESS_TOKEN_SECRET: string;

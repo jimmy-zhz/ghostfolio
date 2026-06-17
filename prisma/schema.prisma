@@ -278,8 +278,9 @@ model User {
   tags          Tag[]
   thirdPartyId  String?
   updatedAt     DateTime        @updatedAt
-  watchlist     SymbolProfile[] @relation("UserWatchlist")
-  SymbolProfile SymbolProfile[]
+  watchlist       SymbolProfile[] @relation("UserWatchlist")
+  SymbolProfile   SymbolProfile[]
+  investmentPlan  InvestmentPlan?
 
   @@index([accessToken])
   @@index([createdAt])
@@ -359,4 +360,99 @@ enum Type {
 enum ViewMode {
   DEFAULT
   ZEN
+}
+
+// ── Investment Plan ───────────────────────────────────────────────────────────
+
+model InvestmentPlan {
+  id                String                    @id @default(uuid())
+  capitalPool       Float
+  deployedCapital   Float                     @default(0)
+  notifyEmail       String?
+  notifyLanguage    String                    @default("en")
+  emailEnabled      Boolean                   @default(false)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  user              User                      @relation(fields: [userId], onDelete: Cascade, references: [id])
+  userId            String                    @unique
+  allocations       InvestmentPlanAllocation[]
+  dcaSchedules      DcaSchedule[]
+  signals           InvestmentSignal[]
+}
+
+model InvestmentPlanAllocation {
+  id                  String         @id @default(uuid())
+  symbol              String
+  targetWeight        Float
+  rebalanceThreshold  Float          @default(5)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  plan                InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId              String
+
+  @@unique([planId, symbol])
+  @@index([planId])
+}
+
+model DcaSchedule {
+  id             String          @id @default(uuid())
+  symbol         String
+  type           DcaType         @default(ADD_POSITION)
+  weeklyBudget   Float
+  totalBudget    Float?
+  signalType     DcaSignalType   @default(MA5)
+  deadlineDay    Int             @default(5)
+  isActive       Boolean         @default(true)
+  startDate      DateTime
+  endDate        DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  plan           InvestmentPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId         String
+
+  @@index([planId])
+  @@index([isActive])
+}
+
+model InvestmentSignal {
+  id           String             @id @default(uuid())
+  symbol       String
+  type         SignalType
+  amount       Float
+  reason       String
+  status       SignalStatus       @default(PENDING)
+  emailSent    Boolean            @default(false)
+  date         DateTime           @default(now())
+  createdAt    DateTime           @default(now())
+  plan         InvestmentPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId       String
+
+  @@index([planId])
+  @@index([date])
+  @@index([status])
+}
+
+enum DcaType {
+  INITIAL_POSITION
+  ADD_POSITION
+}
+
+enum DcaSignalType {
+  FIXED
+  MA5
+  RSI
+  COMBINED
+}
+
+enum SignalType {
+  DCA_BUY
+  DCA_WAIT
+  REBALANCE_BUY
+  REBALANCE_SELL
+}
+
+enum SignalStatus {
+  PENDING
+  EXECUTED
+  DISMISSED
 }

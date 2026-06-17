@@ -27,17 +27,22 @@ import {
   OnInit,
   signal
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
 import { DeviceDetectorService } from 'ngx-device-detector';
+import { catchError, of } from 'rxjs';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    CommonModule,
     GfLineChartComponent,
     GfPortfolioPerformanceComponent,
     MatButtonModule,
+    MatCardModule,
     RouterModule
   ],
   selector: 'gf-home-overview',
@@ -48,6 +53,7 @@ export class GfHomeOverviewComponent implements OnInit {
   protected readonly errors = signal<AssetProfileIdentifier[]>([]);
   protected readonly hasImpersonationId = signal(false);
   protected readonly historicalDataItems = signal<LineChartItem[] | null>(null);
+  protected readonly investmentSignals = signal<any[]>([]);
   protected readonly isLoadingPerformance = signal(true);
   protected readonly performance = signal<PortfolioPerformance | null>(null);
   protected readonly performanceLabel = $localize`Performance`;
@@ -102,6 +108,18 @@ export class GfHomeOverviewComponent implements OnInit {
   }
 
   public ngOnInit() {
+    this.dataService
+      .fetchInvestmentSignals()
+      .pipe(
+        catchError(() => of({ signals: [] })),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ signals }) => {
+        this.investmentSignals.set(
+          signals.filter((s: any) => s.status === 'PENDING' && s.type !== 'DCA_WAIT')
+        );
+      });
+
     this.impersonationStorageService
       .onChangeHasImpersonation()
       .pipe(takeUntilDestroyed(this.destroyRef))

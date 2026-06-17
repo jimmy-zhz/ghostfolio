@@ -18,6 +18,7 @@ import { AdminService, DataService } from '@ghostfolio/ui/services';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -29,6 +30,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
@@ -45,6 +48,7 @@ import { catchError, filter, of } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    FormsModule,
     GfAdminPlatformComponent,
     GfAdminTagComponent,
     GfDataProviderStatusComponent,
@@ -54,6 +58,8 @@ import { catchError, filter, of } from 'rxjs';
     IonIcon,
     MatButtonModule,
     MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
     MatMenuModule,
     MatProgressBarModule,
     MatSortModule,
@@ -77,9 +83,16 @@ export class GfAdminSettingsComponent implements OnInit {
     'usage',
     'actions'
   ];
+  public aiConfig: { apiKey: string; hasApiKey: boolean; model: string } = {
+    apiKey: '',
+    hasApiKey: false,
+    model: ''
+  };
   public ghostfolioApiStatus: DataProviderGhostfolioStatusResponse;
   public isGhostfolioApiKeyValid: boolean;
   public isLoading = false;
+  public openRouterApiKey = '';
+  public openRouterModel = '';
   public pricingUrl: string;
   public user: User;
 
@@ -153,8 +166,33 @@ export class GfAdminSettingsComponent implements OnInit {
     });
   }
 
+  public onSaveAiConfig() {
+    this.dataService
+      .putAiConfig({
+        apiKey: this.openRouterApiKey || undefined,
+        model: this.openRouterModel
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadAiConfig();
+      });
+  }
+
+  private loadAiConfig() {
+    this.dataService
+      .fetchAiConfig()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((config) => {
+        this.aiConfig = config;
+        this.openRouterModel = config.model;
+        this.openRouterApiKey = '';
+        this.changeDetectorRef.markForCheck();
+      });
+  }
+
   private initialize() {
     this.isLoading = true;
+    this.loadAiConfig();
 
     this.dataSource = new MatTableDataSource();
 

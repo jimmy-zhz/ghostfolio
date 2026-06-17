@@ -30,6 +30,11 @@ export const routes: Routes = [
           import('./fire/fire-page.routes').then((m) => m.routes)
       },
       {
+        path: internalRoutes.portfolio.subRoutes.investmentPlan.path,
+        loadChildren: () =>
+          import('./investment-plan/investment-plan-page.routes').then((m) => m.routes)
+      },
+      {
         path: internalRoutes.portfolio.subRoutes.xRay.path,
         loadChildren: () =>
           import('./x-ray/x-ray-page.routes').then((m) => m.routes)

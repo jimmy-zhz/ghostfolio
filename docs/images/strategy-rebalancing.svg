@@ -1,0 +1,137 @@
+<svg viewBox="0 0 780 660" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" role="img">
+  <title>方案二：目标权重再平衡</title>
+  <desc>设定各资产目标占比，当实际偏差超过阈值时买入或卖出恢复平衡</desc>
+
+  <rect width="780" height="660" fill="#f8f8f6"/>
+
+  <!-- Title -->
+  <text x="390" y="38" text-anchor="middle" font-size="18" font-weight="500" fill="#2c2c2a">方案二：目标权重再平衡</text>
+  <text x="390" y="58" text-anchor="middle" font-size="13" fill="#888780">设定目标占比，偏差超阈值时系统提醒操作</text>
+
+  <!-- ===== Left: Target vs Actual ===== -->
+  <rect x="30" y="76" width="340" height="280" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="200" y="100" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">目标 vs 当前 持仓占比</text>
+
+  <!-- Legend -->
+  <rect x="120" y="112" width="12" height="12" rx="2" fill="#B5D4F4"/>
+  <text x="136" y="122" font-size="11" fill="#5f5e5a">目标</text>
+  <rect x="180" y="112" width="12" height="12" rx="2" fill="#378ADD"/>
+  <text x="196" y="122" font-size="11" fill="#5f5e5a">当前（涨后）</text>
+
+  <!-- Bar chart: 3 assets -->
+  <!-- Asset A: ETF沪深300 target=50%, current=62% -->
+  <!-- Asset B: ETF纳斯达克 target=30%, current=24% -->
+  <!-- Asset C: 债券ETF target=20%, current=14% -->
+
+  <!-- Y axis -->
+  <line x1="70" y1="140" x2="70" y2="330" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="65" y="144" text-anchor="end" font-size="10" fill="#888780">60%</text>
+  <text x="65" y="178" text-anchor="end" font-size="10" fill="#888780">45%</text>
+  <text x="65" y="216" text-anchor="end" font-size="10" fill="#888780">30%</text>
+  <text x="65" y="254" text-anchor="end" font-size="10" fill="#888780">15%</text>
+  <text x="65" y="292" text-anchor="end" font-size="10" fill="#888780">0%</text>
+  <line x1="70" y1="144" x2="320" y2="144" stroke="#ece9e0" stroke-width="0.5"/>
+  <line x1="70" y1="178" x2="320" y2="178" stroke="#ece9e0" stroke-width="0.5"/>
+  <line x1="70" y1="216" x2="320" y2="216" stroke="#ece9e0" stroke-width="0.5"/>
+  <line x1="70" y1="254" x2="320" y2="254" stroke="#ece9e0" stroke-width="0.5"/>
+  <line x1="70" y1="292" x2="320" y2="292" stroke="#d3d1c7" stroke-width="0.5"/>
+
+  <!-- Asset A bars (target 50% = 100px, current 62% = 124px from bottom=292) -->
+  <rect x="90"  y="192" width="24" height="100" rx="2" fill="#B5D4F4"/>
+  <rect x="118" y="168" width="24" height="124" rx="2" fill="#378ADD"/>
+  <text x="110" y="310" text-anchor="middle" font-size="11" fill="#5f5e5a">沪深300 ETF</text>
+  <text x="104" y="188" text-anchor="middle" font-size="10" fill="#185FA5">50%</text>
+  <text x="130" y="164" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">62% ↑</text>
+
+  <!-- Asset B bars (target 30% = 60px, current 24% = 48px) -->
+  <rect x="190" y="232" width="24" height="60" rx="2" fill="#B5D4F4"/>
+  <rect x="218" y="244" width="24" height="48" rx="2" fill="#378ADD"/>
+  <text x="210" y="310" text-anchor="middle" font-size="11" fill="#5f5e5a">纳斯达克 ETF</text>
+  <text x="202" y="228" text-anchor="middle" font-size="10" fill="#185FA5">30%</text>
+  <text x="230" y="240" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">24% ↓</text>
+
+  <!-- Asset C bars (target 20% = 40px, current 14% = 28px) -->
+  <rect x="282" y="252" width="24" height="40" rx="2" fill="#B5D4F4"/>
+  <rect x="310" y="264" width="24" height="28" rx="2" fill="#378ADD"/>
+  <text x="305" y="310" text-anchor="middle" font-size="11" fill="#5f5e5a">债券 ETF</text>
+  <text x="294" y="248" text-anchor="middle" font-size="10" fill="#185FA5">20%</text>
+  <text x="322" y="260" text-anchor="middle" font-size="10" font-weight="500" fill="#0C447C">14% ↓</text>
+
+  <!-- Drift annotation for Asset A -->
+  <line x1="130" y1="192" x2="155" y2="168" stroke="#E24B4A" stroke-width="1" stroke-dasharray="3,2"/>
+  <rect x="140" y="148" width="68" height="20" rx="4" fill="#FCEBEB" stroke="#F09595" stroke-width="0.5"/>
+  <text x="174" y="162" text-anchor="middle" font-size="11" fill="#501313">偏差 +12%</text>
+
+  <!-- ===== Right: Formula box ===== -->
+  <rect x="410" y="76" width="340" height="280" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="580" y="100" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">计算公式</text>
+
+  <!-- Total value -->
+  <rect x="430" y="112" width="300" height="42" rx="6" fill="#F1EFE8"/>
+  <text x="580" y="129" text-anchor="middle" font-size="12" fill="#5f5e5a">总资产 = Σ( 持有量ᵢ × 价格ᵢ )</text>
+  <text x="580" y="147" text-anchor="middle" font-size="12" font-weight="500" fill="#2c2c2a">例：$8000 + $3200 + $1800 = $13000</text>
+
+  <!-- Current weight -->
+  <rect x="430" y="163" width="300" height="42" rx="6" fill="#F1EFE8"/>
+  <text x="580" y="180" text-anchor="middle" font-size="12" fill="#5f5e5a">当前权重ᵢ = ( 持有量ᵢ × 价格ᵢ ) / 总资产</text>
+  <text x="580" y="198" text-anchor="middle" font-size="12" font-weight="500" fill="#2c2c2a">沪深300：$8000 / $13000 = 61.5%</text>
+
+  <!-- Deviation -->
+  <rect x="430" y="214" width="300" height="42" rx="6" fill="#FCEBEB" stroke="#F7C1C1" stroke-width="0.5"/>
+  <text x="580" y="231" text-anchor="middle" font-size="12" fill="#5f5e5a">偏差ᵢ = 当前权重ᵢ − 目标权重ᵢ</text>
+  <text x="580" y="249" text-anchor="middle" font-size="12" font-weight="500" fill="#A32D2D">61.5% − 50% = +11.5%  ← 触发！</text>
+
+  <!-- Action -->
+  <rect x="430" y="265" width="300" height="58" rx="6" fill="#E1F5EE" stroke="#9FE1CB" stroke-width="0.5"/>
+  <text x="580" y="282" text-anchor="middle" font-size="12" fill="#5f5e5a">调整金额ᵢ = 总资产 × ( 目标 − 当前 )</text>
+  <text x="580" y="300" text-anchor="middle" font-size="12" font-weight="500" fill="#04342C">沪深300：$13000 × (50%−61.5%)</text>
+  <text x="580" y="316" text-anchor="middle" font-size="12" font-weight="500" fill="#04342C">= −$1495 → 卖出 $1495</text>
+
+  <!-- ===== Rebalance action flow ===== -->
+  <rect x="30" y="376" width="720" height="110" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="390" y="398" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">再平衡操作一览（总资产 $13000）</text>
+
+  <!-- Three action cards -->
+  <!-- Asset A: sell -->
+  <rect x="50" y="410" width="210" height="62" rx="6" fill="#FCEBEB" stroke="#F09595" stroke-width="0.5"/>
+  <text x="80" y="430" font-size="12" fill="#5f5e5a">沪深300 ETF</text>
+  <text x="80" y="448" font-size="13" font-weight="500" fill="#A32D2D">卖出 $1,495</text>
+  <text x="80" y="464" font-size="11" fill="#993C1D">61.5% → 50%，超配</text>
+
+  <!-- Asset B: buy -->
+  <rect x="285" y="410" width="210" height="62" rx="6" fill="#E1F5EE" stroke="#9FE1CB" stroke-width="0.5"/>
+  <text x="315" y="430" font-size="12" fill="#5f5e5a">纳斯达克 ETF</text>
+  <text x="315" y="448" font-size="13" font-weight="500" fill="#0F6E56">买入 $780</text>
+  <text x="315" y="464" font-size="11" fill="#085041">24.6% → 30%，低配</text>
+
+  <!-- Asset C: buy -->
+  <rect x="520" y="410" width="210" height="62" rx="6" fill="#E1F5EE" stroke="#9FE1CB" stroke-width="0.5"/>
+  <text x="550" y="430" font-size="12" fill="#5f5e5a">债券 ETF</text>
+  <text x="550" y="448" font-size="13" font-weight="500" fill="#0F6E56">买入 $715</text>
+  <text x="550" y="464" font-size="11" fill="#085041">13.8% → 20%，低配</text>
+
+  <!-- ===== Threshold & Trigger section ===== -->
+  <rect x="30" y="506" width="340" height="130" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="200" y="528" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">触发条件设计</text>
+
+  <rect x="50" y="538" width="300" height="22" rx="4" fill="#FAEEDA"/>
+  <text x="200" y="554" text-anchor="middle" font-size="12" fill="#412402">阈值：|偏差| &gt; 5%（可自定义）</text>
+
+  <text x="50" y="578" font-size="12" fill="#5f5e5a">• 时间触发：每月1日检查一次</text>
+  <text x="50" y="596" font-size="12" fill="#5f5e5a">• 价格触发：任意资产价格变动 &gt;10%</text>
+  <text x="50" y="614" font-size="12" fill="#5f5e5a">• 混合触发：两者任一满足即检查</text>
+
+  <!-- ===== Why it works ===== -->
+  <rect x="390" y="506" width="360" height="130" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="570" y="528" text-anchor="middle" font-size="13" font-weight="500" fill="#2c2c2a">为什么它有效？</text>
+  <text x="410" y="552" font-size="12" fill="#5f5e5a">涨多了 → 自动卖出（高位减仓）</text>
+  <text x="410" y="572" font-size="12" fill="#5f5e5a">跌多了 → 自动买入（低位补仓）</text>
+  <text x="410" y="592" font-size="12" fill="#5f5e5a">规则驱动，消除情绪影响</text>
+  <text x="410" y="612" font-size="12" fill="#5f5e5a">天然"高卖低买"的纪律约束</text>
+
+  <defs>
+    <marker id="arrow2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888780"/>
+    </marker>
+  </defs>
+</svg>

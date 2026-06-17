@@ -97,5 +97,46 @@
         />
       </div>
     </div>
+
+    @if (investmentSignals().length > 0) {
+      <div class="row mt-2 px-3 pb-3">
+        <div class="col">
+          <mat-card appearance="outlined" style="border-left: 4px solid #f59e0b;">
+            <mat-card-header class="pt-3">
+              <mat-card-title style="font-size: 15px;">
+                📊 今日投资建议
+              </mat-card-title>
+              <mat-card-subtitle>
+                共 {{ investmentSignals().length }} 条待处理信号
+                &nbsp;·&nbsp;
+                <a [routerLink]="['/portfolio', 'investment-plan']" style="color: inherit;">查看详情</a>
+              </mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content class="py-2">
+              @for (signal of investmentSignals(); track signal.id) {
+                <div class="d-flex align-items-center justify-content-between py-1 border-bottom">
+                  <div>
+                    <strong>{{ signal.symbol }}</strong>
+                    <span class="ms-2 text-muted" style="font-size: 13px;">
+                      @if (signal.type === 'DCA_BUY') { 📈 DCA 买入 }
+                      @if (signal.type === 'REBALANCE_BUY') { 🟢 再平衡买入 }
+                      @if (signal.type === 'REBALANCE_SELL') { 🔴 再平衡卖出 }
+                    </span>
+                    @if (signal.amount > 0) {
+                      <span class="ms-1" style="font-size: 13px;">
+                        ${{ signal.amount | number:'1.0-0' }}
+                      </span>
+                    }
+                  </div>
+                  <span class="text-muted" style="font-size: 12px;">
+                    {{ signal.date | date:'MM-dd' }}
+                  </span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+    }
   }
 </div>

@@ -1,4 +1,8 @@
+import { DcaSignalService } from '@ghostfolio/api/app/investment-plan/dca-signal.service';
+import { InvestmentPlanService } from '@ghostfolio/api/app/investment-plan/investment-plan.service';
+import { RebalancingService } from '@ghostfolio/api/app/investment-plan/rebalancing.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
+import { MailService } from '@ghostfolio/api/services/mail/mail.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PropertyService } from '@ghostfolio/api/services/property/property.service';
@@ -24,8 +28,12 @@ export class CronService {
   public constructor(
     private readonly configurationService: ConfigurationService,
     private readonly dataGatheringService: DataGatheringService,
+    private readonly dcaSignalService: DcaSignalService,
     private readonly exchangeRateDataService: ExchangeRateDataService,
+    private readonly investmentPlanService: InvestmentPlanService,
+    private readonly mailService: MailService,
     private readonly propertyService: PropertyService,
+    private readonly rebalancingService: RebalancingService,
     private readonly statisticsGatheringService: StatisticsGatheringService,
     private readonly twitterBotService: TwitterBotService,
     private readonly userService: UserService
@@ -88,6 +96,42 @@ export class CronService {
           };
         })
       );
+    }
+  }
+
+  @Cron('0 9 * * 1-5')
+  public async runInvestmentSignals() {
+    const plans = await this.investmentPlanService.getAllActivePlans();
+
+    for (const plan of plans) {
+      await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
+      await this.rebalancingService.generateRebalancingSignals(
+        plan.id,
+        plan.userId,
+        plan.allocations
+      );
+
+      if (plan.emailEnabled && plan.notifyEmail) {
+        const signals = await this.investmentPlanService.getPendingSignals(plan.id);
+        const actionableSignals = signals.filter(
+          (s) => s.type !== 'DCA_WAIT' && !s.emailSent
+        );
+
+        if (actionableSignals.length > 0) {
+          const sent = await this.mailService.sendInvestmentSignalEmail(
+            plan.notifyEmail,
+            plan.notifyLanguage,
+            actionableSignals,
+            []
+          );
+
+          if (sent) {
+            await this.investmentPlanService.markSignalsEmailSent(
+              actionableSignals.map((s) => s.id)
+            );
+          }
+        }
+      }
     }
   }
 

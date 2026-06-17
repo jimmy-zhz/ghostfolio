@@ -142,6 +142,11 @@ export const internalRoutes = {
         routerLink: ['/portfolio', 'fire'],
         title: 'FIRE'
       },
+      investmentPlan: {
+        path: 'investment-plan',
+        routerLink: ['/portfolio', 'investment-plan'],
+        title: $localize`Investment Plan`
+      },
       xRay: {
         path: 'x-ray',
         routerLink: ['/portfolio', 'x-ray'],

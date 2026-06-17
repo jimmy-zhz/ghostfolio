@@ -1,0 +1,127 @@
+<svg viewBox="0 0 780 620" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, sans-serif" role="img">
+  <title>方案一：智能窗口 DCA 流程</title>
+  <desc>每周固定预算，在窗口内寻找相对低点买入，周五兜底执行</desc>
+
+  <rect width="780" height="620" fill="#f8f8f6"/>
+
+  <!-- Title -->
+  <text x="390" y="38" text-anchor="middle" font-size="18" font-weight="500" fill="#2c2c2a">方案一：智能窗口 DCA</text>
+  <text x="390" y="58" text-anchor="middle" font-size="13" fill="#888780">固定周预算 $200，在窗口内寻找相对低点，周五兜底</text>
+
+  <!-- ===== Price chart area ===== -->
+  <!-- Chart bg -->
+  <rect x="40" y="80" width="700" height="180" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="56" y="100" font-size="11" fill="#888780">价格走势（示意）</text>
+
+  <!-- Grid lines -->
+  <line x1="60" y1="230" x2="720" y2="230" stroke="#e8e6de" stroke-width="0.5"/>
+  <line x1="60" y1="200" x2="720" y2="200" stroke="#e8e6de" stroke-width="0.5"/>
+  <line x1="60" y1="170" x2="720" y2="170" stroke="#e8e6de" stroke-width="0.5"/>
+  <line x1="60" y1="140" x2="720" y2="140" stroke="#e8e6de" stroke-width="0.5"/>
+  <line x1="60" y1="110" x2="720" y2="110" stroke="#e8e6de" stroke-width="0.5"/>
+
+  <!-- 5-day MA line (dashed) -->
+  <polyline points="70,165 190,158 310,168 430,155 550,170 670,160 720,155"
+    fill="none" stroke="#b4b2a9" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <text x="725" y="158" font-size="10" fill="#888780">5日均线</text>
+
+  <!-- Price line -->
+  <polyline points="70,160 130,148 190,142 250,155 310,172 370,180 430,162 490,145 550,155 610,168 670,158 720,148"
+    fill="none" stroke="#185FA5" stroke-width="2"/>
+
+  <!-- Day markers on x-axis -->
+  <!-- Mon=130, Tue=250, Wed=370, Thu=490, Fri=610 -->
+  <line x1="130" y1="108" x2="130" y2="240" stroke="#d3d1c7" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="250" y1="108" x2="250" y2="240" stroke="#d3d1c7" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="370" y1="108" x2="370" y2="240" stroke="#d3d1c7" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="490" y1="108" x2="490" y2="240" stroke="#d3d1c7" stroke-width="0.5" stroke-dasharray="3,3"/>
+  <line x1="610" y1="108" x2="610" y2="240" stroke="#d3d1c7" stroke-width="0.5" stroke-dasharray="3,3"/>
+
+  <text x="130" y="252" text-anchor="middle" font-size="11" fill="#5f5e5a">周一</text>
+  <text x="250" y="252" text-anchor="middle" font-size="11" fill="#5f5e5a">周二</text>
+  <text x="370" y="252" text-anchor="middle" font-size="11" fill="#5f5e5a">周三</text>
+  <text x="490" y="252" text-anchor="middle" font-size="11" fill="#5f5e5a">周四</text>
+  <text x="610" y="252" text-anchor="middle" font-size="11" fill="#5f5e5a">周五</text>
+
+  <!-- Signal annotation: Wed price drops below MA, buy here -->
+  <!-- Price at Wed=180, MA at Wed=168 → price above MA, no signal -->
+  <!-- Thu: price=145, MA=155 → price BELOW MA → buy signal -->
+  <circle cx="490" cy="145" r="8" fill="none" stroke="#0F6E56" stroke-width="2"/>
+  <circle cx="490" cy="145" r="3" fill="#0F6E56"/>
+  <line x1="490" y1="137" x2="490" y2="108" stroke="#0F6E56" stroke-width="1" stroke-dasharray="3,2"/>
+  <rect x="440" y="90" width="100" height="22" rx="4" fill="#E1F5EE" stroke="#9FE1CB" stroke-width="0.5"/>
+  <text x="490" y="105" text-anchor="middle" font-size="11" fill="#085041">买入 $200 ✓</text>
+
+  <!-- Mon: above MA, wait -->
+  <circle cx="130" cy="148" r="5" fill="none" stroke="#B4B2A9" stroke-width="1.5"/>
+  <text x="130" y="120" text-anchor="middle" font-size="10" fill="#888780">等待</text>
+
+  <!-- Tue: above MA, wait -->
+  <circle cx="250" cy="155" r="5" fill="none" stroke="#B4B2A9" stroke-width="1.5"/>
+  <text x="250" y="120" text-anchor="middle" font-size="10" fill="#888780">等待</text>
+
+  <!-- Wed: above MA, wait -->
+  <circle cx="370" cy="172" r="5" fill="none" stroke="#B4B2A9" stroke-width="1.5"/>
+  <text x="370" y="120" text-anchor="middle" font-size="10" fill="#888780">等待</text>
+
+  <!-- ===== Decision flow below chart ===== -->
+  <!-- Start node -->
+  <rect x="330" y="275" width="120" height="38" rx="19" fill="#CECBF6" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="390" y="299" text-anchor="middle" font-size="13" font-weight="500" fill="#26215C">新的一天</text>
+
+  <!-- Arrow down -->
+  <line x1="390" y1="313" x2="390" y2="335" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Decision diamond -->
+  <polygon points="390,335 480,365 390,395 300,365" fill="#FAEEDA" stroke="#FAC775" stroke-width="0.5"/>
+  <text x="390" y="361" text-anchor="middle" font-size="12" fill="#412402">今日是</text>
+  <text x="390" y="376" text-anchor="middle" font-size="12" fill="#412402">周五？</text>
+
+  <!-- Yes → right → buy anyway -->
+  <line x1="480" y1="365" x2="580" y2="365" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="530" y="358" text-anchor="middle" font-size="11" fill="#888780">是</text>
+  <rect x="580" y="345" width="130" height="40" rx="6" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="645" y="362" text-anchor="middle" font-size="12" fill="#04342C">兜底执行</text>
+  <text x="645" y="378" text-anchor="middle" font-size="12" font-weight="500" fill="#04342C">买入 $200</text>
+
+  <!-- No → down -->
+  <line x1="390" y1="395" x2="390" y2="420" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="400" y="412" font-size="11" fill="#888780">否</text>
+
+  <!-- Signal check diamond -->
+  <polygon points="390,420 500,455 390,490 280,455" fill="#FAEEDA" stroke="#FAC775" stroke-width="0.5"/>
+  <text x="390" y="449" text-anchor="middle" font-size="12" fill="#412402">触发信号？</text>
+  <text x="390" y="465" text-anchor="middle" font-size="11" fill="#633806">价格 &lt; 5日均线</text>
+
+  <!-- Signal legend -->
+  <text x="510" y="440" font-size="10" fill="#888780">或 RSI &lt; 40</text>
+  <text x="510" y="454" font-size="10" fill="#888780">或 当日跌 &gt;2%</text>
+
+  <!-- Yes → right → buy -->
+  <line x1="500" y1="455" x2="580" y2="455" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="540" y="448" text-anchor="middle" font-size="11" fill="#888780">是（低点）</text>
+  <rect x="580" y="435" width="130" height="40" rx="6" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="645" y="452" text-anchor="middle" font-size="12" fill="#04342C">信号买入</text>
+  <text x="645" y="468" text-anchor="middle" font-size="12" font-weight="500" fill="#04342C">买入 $200</text>
+
+  <!-- No → left → next day -->
+  <line x1="280" y1="455" x2="190" y2="455" stroke="#888780" stroke-width="1.5"/>
+  <text x="235" y="448" text-anchor="middle" font-size="11" fill="#888780">否（等待）</text>
+  <line x1="190" y1="455" x2="190" y2="286" stroke="#888780" stroke-width="1.5"/>
+  <line x1="190" y1="286" x2="330" y2="286" stroke="#888780" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="190" y="360" text-anchor="middle" font-size="10" fill="#888780" transform="rotate(-90,190,360)">明天再看</text>
+
+  <!-- Bottom annotation -->
+  <rect x="40" y="515" width="700" height="82" rx="8" fill="#fff" stroke="#d3d1c7" stroke-width="0.5"/>
+  <text x="56" y="537" font-size="12" font-weight="500" fill="#2c2c2a">关键点</text>
+  <text x="56" y="556" font-size="12" fill="#5f5e5a">• 预算不变（每周 $200），变的是执行时机，不是是否执行</text>
+  <text x="56" y="573" font-size="12" fill="#5f5e5a">• 周五兜底保证资金不积压，避免"等到完美价格"而错过整周</text>
+  <text x="56" y="590" font-size="12" fill="#5f5e5a">• 信号可叠加：多个信号同时触发时，可加仓至 $200 全额</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#888780"/>
+    </marker>
+  </defs>
+</svg>

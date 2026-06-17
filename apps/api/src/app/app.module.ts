@@ -52,6 +52,7 @@ import { ExportModule } from './export/export.module';
 import { HealthModule } from './health/health.module';
 import { ImportModule } from './import/import.module';
 import { InfoModule } from './info/info.module';
+import { InvestmentPlanModule } from './investment-plan/investment-plan.module';
 import { LogoModule } from './logo/logo.module';
 import { PlatformModule } from './platform/platform.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
@@ -116,6 +117,7 @@ import { UserModule } from './user/user.module';
     HealthModule,
     ImportModule,
     InfoModule,
+    InvestmentPlanModule,
     LogoModule,
     MarketDataModule,
     PlatformModule,

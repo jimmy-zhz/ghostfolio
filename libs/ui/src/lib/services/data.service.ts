@@ -839,6 +839,52 @@ export class DataService {
     return this.http.put<void>(`/api/v1/admin/settings/${key}`, aData);
   }
 
+  public fetchInvestmentPlan() {
+    return this.http.get<any>('/api/v1/investment-plan');
+  }
+
+  public putInvestmentPlan(data: any) {
+    return this.http.put<any>('/api/v1/investment-plan', data);
+  }
+
+  public putInvestmentPlanAllocation(symbol: string, data: { targetWeight: number; rebalanceThreshold?: number }) {
+    return this.http.put<any>(`/api/v1/investment-plan/allocation/${encodeURIComponent(symbol)}`, data);
+  }
+
+  public deleteInvestmentPlanAllocation(symbol: string) {
+    return this.http.delete<any>(`/api/v1/investment-plan/allocation/${encodeURIComponent(symbol)}`);
+  }
+
+  public postInvestmentPlanDca(data: any) {
+    return this.http.post<any>('/api/v1/investment-plan/dca', data);
+  }
+
+  public deleteInvestmentPlanDca(id: string) {
+    return this.http.delete<any>(`/api/v1/investment-plan/dca/${id}`);
+  }
+
+  public fetchInvestmentSignals() {
+    return this.http.get<{ signals: any[] }>('/api/v1/investment-plan/signals');
+  }
+
+  public putInvestmentSignalStatus(id: string, status: 'EXECUTED' | 'DISMISSED') {
+    return this.http.put<any>(`/api/v1/investment-plan/signals/${id}/status`, { status });
+  }
+
+  public fetchRebalancing() {
+    return this.http.get<any>('/api/v1/investment-plan/rebalancing');
+  }
+
+  public fetchAiConfig() {
+    return this.http.get<{ apiKey: string; hasApiKey: boolean; model: string }>(
+      '/api/v1/ai/config'
+    );
+  }
+
+  public putAiConfig(data: { apiKey?: string; model?: string }) {
+    return this.http.put<{ success: boolean }>('/api/v1/ai/config', data);
+  }
+
   public putHoldingTags({
     dataSource,
     symbol,
