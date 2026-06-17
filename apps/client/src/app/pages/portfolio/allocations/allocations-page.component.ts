@@ -27,7 +27,7 @@ import {
   DestroyRef,
   OnInit
 } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -45,6 +45,7 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
   imports: [
+    CurrencyPipe,
     DecimalPipe,
     GfPortfolioProportionChartComponent,
     GfPremiumIndicatorComponent,
