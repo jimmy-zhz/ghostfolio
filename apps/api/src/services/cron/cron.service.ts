@@ -1,6 +1,5 @@
 import { DcaSignalService } from '@ghostfolio/api/app/investment-plan/dca-signal.service';
 import { InvestmentPlanService } from '@ghostfolio/api/app/investment-plan/investment-plan.service';
-import { RebalancingService } from '@ghostfolio/api/app/investment-plan/rebalancing.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { MailService } from '@ghostfolio/api/services/mail/mail.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
@@ -33,7 +32,6 @@ export class CronService {
     private readonly investmentPlanService: InvestmentPlanService,
     private readonly mailService: MailService,
     private readonly propertyService: PropertyService,
-    private readonly rebalancingService: RebalancingService,
     private readonly statisticsGatheringService: StatisticsGatheringService,
     private readonly twitterBotService: TwitterBotService,
     private readonly userService: UserService
@@ -105,11 +103,6 @@ export class CronService {
 
     for (const plan of plans) {
       await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
-      await this.rebalancingService.generateRebalancingSignals(
-        plan.id,
-        plan.userId,
-        plan.allocations
-      );
 
       if (plan.emailEnabled && plan.notifyEmail) {
         const signals = await this.investmentPlanService.getPendingSignals(plan.id);

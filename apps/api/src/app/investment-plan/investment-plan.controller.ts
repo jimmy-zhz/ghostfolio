@@ -1,3 +1,4 @@
+import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import type { RequestWithUser } from '@ghostfolio/common/types';
 
 import { RebalancingService } from './rebalancing.service';
@@ -25,6 +26,7 @@ import { InvestmentPlanService } from './investment-plan.service';
 export class InvestmentPlanController {
   public constructor(
     private readonly investmentPlanService: InvestmentPlanService,
+    private readonly portfolioService: PortfolioService,
     private readonly rebalancingService: RebalancingService,
     @Inject(REQUEST) private readonly request: RequestWithUser
   ) {}
@@ -146,9 +148,15 @@ export class InvestmentPlanController {
       this.request.user.id
     );
     if (!plan) return { actions: [], hasTriggered: false, totalValue: 0 };
+    const { holdings } = await this.portfolioService.getDetails({
+      filters: [],
+      impersonationId: undefined,
+      userId: this.request.user.id,
+      withMarkets: false
+    });
     return this.rebalancingService.calculateRebalancing(
-      this.request.user.id,
-      plan.allocations
+      plan.allocations,
+      holdings
     );
   }
 

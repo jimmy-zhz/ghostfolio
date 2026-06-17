@@ -1,4 +1,4 @@
-import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
+import { PortfolioPosition } from '@ghostfolio/common/interfaces';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 
 import { Injectable } from '@nestjs/common';
@@ -23,25 +23,15 @@ export interface RebalancingResult {
 
 @Injectable()
 export class RebalancingService {
-  public constructor(
-    private readonly portfolioService: PortfolioService,
-    private readonly prismaService: PrismaService
-  ) {}
+  public constructor(private readonly prismaService: PrismaService) {}
 
   public async calculateRebalancing(
-    userId: string,
-    allocations: InvestmentPlanAllocation[]
+    allocations: InvestmentPlanAllocation[],
+    holdings: { [symbol: string]: Pick<PortfolioPosition, 'valueInBaseCurrency'> }
   ): Promise<RebalancingResult> {
     if (!allocations.length) {
       return { actions: [], hasTriggered: false, totalValue: 0 };
     }
-
-    const { holdings } = await this.portfolioService.getDetails({
-      filters: [],
-      impersonationId: undefined,
-      userId,
-      withMarkets: false
-    });
 
     const totalValue = Object.values(holdings).reduce(
       (sum, h) => sum + (h.valueInBaseCurrency ?? 0),
@@ -85,10 +75,10 @@ export class RebalancingService {
 
   public async generateRebalancingSignals(
     planId: string,
-    userId: string,
-    allocations: InvestmentPlanAllocation[]
+    allocations: InvestmentPlanAllocation[],
+    holdings: { [symbol: string]: Pick<PortfolioPosition, 'valueInBaseCurrency'> }
   ): Promise<void> {
-    const result = await this.calculateRebalancing(userId, allocations);
+    const result = await this.calculateRebalancing(allocations, holdings);
     if (!result.hasTriggered) return;
 
     const today = new Date();
