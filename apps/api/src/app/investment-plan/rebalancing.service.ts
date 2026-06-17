@@ -27,16 +27,20 @@ export class RebalancingService {
 
   public async calculateRebalancing(
     allocations: InvestmentPlanAllocation[],
-    holdings: { [symbol: string]: Pick<PortfolioPosition, 'valueInBaseCurrency'> }
+    holdings: { [symbol: string]: Pick<PortfolioPosition, 'valueInBaseCurrency'> },
+    longTermGrowthTarget = 0
   ): Promise<RebalancingResult> {
     if (!allocations.length) {
       return { actions: [], hasTriggered: false, totalValue: 0 };
     }
 
-    const totalValue = Object.values(holdings).reduce(
+    const deployedValue = Object.values(holdings).reduce(
       (sum, h) => sum + (h.valueInBaseCurrency ?? 0),
       0
     );
+
+    // Use longTermGrowthTarget as the base when set; fall back to actual deployed value
+    const totalValue = longTermGrowthTarget > 0 ? longTermGrowthTarget : deployedValue;
 
     if (totalValue === 0) {
       return { actions: [], hasTriggered: false, totalValue: 0 };
@@ -48,6 +52,7 @@ export class RebalancingService {
     for (const allocation of allocations) {
       const holding = holdings[allocation.symbol];
       const currentValue = holding?.valueInBaseCurrency ?? 0;
+      // Current weight is always relative to the target base (longTermGrowthTarget)
       const currentWeight = (currentValue / totalValue) * 100;
       const deviation = currentWeight - allocation.targetWeight;
       const adjustmentValue = (totalValue * (allocation.targetWeight - currentWeight)) / 100;
@@ -76,9 +81,10 @@ export class RebalancingService {
   public async generateRebalancingSignals(
     planId: string,
     allocations: InvestmentPlanAllocation[],
-    holdings: { [symbol: string]: Pick<PortfolioPosition, 'valueInBaseCurrency'> }
+    holdings: { [symbol: string]: Pick<PortfolioPosition, 'valueInBaseCurrency'> },
+    longTermGrowthTarget = 0
   ): Promise<void> {
-    const result = await this.calculateRebalancing(allocations, holdings);
+    const result = await this.calculateRebalancing(allocations, holdings, longTermGrowthTarget);
     if (!result.hasTriggered) return;
 
     const startOfWeek = new Date();

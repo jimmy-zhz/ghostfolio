@@ -61,11 +61,16 @@ export class InvestmentPlanController {
       return {
         allocations: [],
         capitalPool: 0,
+        cashBuffer: 0,
+        cashReserve: 0,
         dcaSchedules: [],
         deployedCapital,
         emailEnabled: false,
+        longTermGrowthTarget: 0,
         notifyEmail: null,
-        notifyLanguage: 'en'
+        notifyLanguage: 'en',
+        preservationBucket: 0,
+        sipMonthlyBudget: 0
       };
     }
 
@@ -78,13 +83,28 @@ export class InvestmentPlanController {
     @Body()
     body: {
       capitalPool: number;
+      cashBuffer?: number;
+      cashReserve?: number;
       deployedCapital?: number;
       emailEnabled?: boolean;
+      longTermGrowthTarget?: number;
       notifyEmail?: string;
       notifyLanguage?: string;
+      preservationBucket?: number;
+      sipMonthlyBudget?: number;
     }
   ) {
-    return this.investmentPlanService.upsertPlan(this.request.user.id, body);
+    const result = await this.investmentPlanService.upsertPlan(
+      this.request.user.id,
+      body
+    );
+    if (body.cashReserve !== undefined) {
+      await this.investmentPlanService.syncEmergencyFundToUserSettings(
+        this.request.user.id,
+        body.cashReserve
+      );
+    }
+    return result;
   }
 
   @Put('allocation/:symbol')
@@ -190,7 +210,8 @@ export class InvestmentPlanController {
 
     return this.rebalancingService.calculateRebalancing(
       plan.allocations,
-      holdings
+      holdings,
+      plan.longTermGrowthTarget ?? 0
     );
   }
 

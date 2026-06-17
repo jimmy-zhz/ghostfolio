@@ -40,21 +40,21 @@ export class PortfolioPageComponent {
         if (state?.user) {
           this.tabs = [
             {
+              iconName: 'calendar-outline',
+              label: internalRoutes.portfolio.subRoutes.investmentPlan.title,
+              routerLink:
+                internalRoutes.portfolio.subRoutes.investmentPlan.routerLink
+            },
+            {
               iconName: 'analytics-outline',
               label: internalRoutes.portfolio.subRoutes.analysis.title,
-              routerLink: internalRoutes.portfolio.routerLink
+              routerLink: internalRoutes.portfolio.subRoutes.analysis.routerLink
             },
             {
               iconName: 'swap-vertical-outline',
               label: internalRoutes.portfolio.subRoutes.activities.title,
               routerLink:
                 internalRoutes.portfolio.subRoutes.activities.routerLink
-            },
-            {
-              iconName: 'calendar-outline',
-              label: internalRoutes.portfolio.subRoutes.investmentPlan.title,
-              routerLink:
-                internalRoutes.portfolio.subRoutes.investmentPlan.routerLink
             },
             {
               iconName: 'pie-chart-outline',

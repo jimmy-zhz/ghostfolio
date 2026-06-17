@@ -18,7 +18,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { DeviceDetectorService } from 'ngx-device-detector';
-import { switchMap } from 'rxjs';
+import { switchMap, forkJoin, catchError, of } from 'rxjs';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -30,6 +30,13 @@ import { switchMap } from 'rxjs';
 })
 export class GfHomeSummaryComponent implements OnInit {
   protected readonly hasImpersonationId = signal<boolean>(false);
+  protected readonly investmentPlan = signal<{
+    cashBuffer: number;
+    cashReserve: number;
+    longTermGrowthTarget: number;
+    preservationBucket: number;
+    sipMonthlyBudget: number;
+  } | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly summary = signal<PortfolioSummary | undefined>(undefined);
   protected readonly user = signal<User | undefined>(undefined);
@@ -89,14 +96,24 @@ export class GfHomeSummaryComponent implements OnInit {
   private update() {
     this.isLoading.set(true);
 
-    this.dataService
-      .fetchPortfolioDetails()
+    forkJoin({
+      plan: this.dataService.fetchInvestmentPlan().pipe(catchError(() => of(null))),
+      portfolio: this.dataService.fetchPortfolioDetails()
+    })
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(({ summary }) => {
+      .subscribe(({ plan, portfolio: { summary } }) => {
         if (summary) {
           this.summary.set(summary);
         }
-
+        if (plan) {
+          this.investmentPlan.set({
+            cashBuffer: plan.cashBuffer ?? 0,
+            cashReserve: plan.cashReserve ?? 0,
+            longTermGrowthTarget: plan.longTermGrowthTarget ?? 0,
+            preservationBucket: plan.preservationBucket ?? 0,
+            sipMonthlyBudget: plan.sipMonthlyBudget ?? 0
+          });
+        }
         this.isLoading.set(false);
       });
   }

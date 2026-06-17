@@ -242,6 +242,78 @@
       />
     </div>
   </div>
+  @if (investmentPlan) {
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 ml-3 text-truncate text-muted small" i18n>Cash Reserve Target</div>
+      <div class="flex-column flex-wrap justify-content-end">
+        <gf-value
+          class="justify-content-end"
+          position="end"
+          [isCurrency]="true"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="baseCurrency"
+          [value]="investmentPlan.cashReserve"
+        />
+      </div>
+    </div>
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 ml-3 text-truncate text-muted small" i18n>Cash Buffer Target</div>
+      <div class="flex-column flex-wrap justify-content-end">
+        <gf-value
+          class="justify-content-end"
+          position="end"
+          [isCurrency]="true"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="baseCurrency"
+          [value]="investmentPlan.cashBuffer"
+        />
+      </div>
+    </div>
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 ml-3 text-truncate text-muted small" i18n>Preservation Bucket Target</div>
+      <div class="flex-column flex-wrap justify-content-end">
+        <gf-value
+          class="justify-content-end"
+          position="end"
+          [isCurrency]="true"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="baseCurrency"
+          [value]="investmentPlan.preservationBucket"
+        />
+      </div>
+    </div>
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 ml-3 text-truncate text-muted small" i18n>Long-term Growth Target</div>
+      <div class="flex-column flex-wrap justify-content-end">
+        <gf-value
+          class="justify-content-end"
+          position="end"
+          [isCurrency]="true"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="baseCurrency"
+          [value]="investmentPlan.longTermGrowthTarget"
+        />
+      </div>
+    </div>
+    <div class="flex-nowrap px-3 py-1 row">
+      <div class="flex-grow-1 ml-3 text-truncate text-muted small" i18n>SIP Monthly Budget</div>
+      <div class="flex-column flex-wrap justify-content-end">
+        <gf-value
+          class="justify-content-end"
+          position="end"
+          [isCurrency]="true"
+          [locale]="locale"
+          [precision]="precision"
+          [unit]="baseCurrency"
+          [value]="investmentPlan.sipMonthlyBudget"
+        />
+      </div>
+    </div>
+  }
   <div class="flex-nowrap px-3 py-1 row">
     <div class="align-items-center d-flex flex-grow-1">
       <ng-container i18n>Buying Power</ng-container>

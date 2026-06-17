@@ -54,11 +54,56 @@
             </mat-card-header>
             <mat-card-content class="py-3">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label i18n>Total Capital (CAD)</mat-label>
+                <mat-label i18n>Total Capital Pool (CAD)</mat-label>
                 <input matInput type="number" [(ngModel)]="plan.capitalPool" />
+                <mat-hint i18n>Total personal savings (static sum)</mat-hint>
               </mat-form-field>
+
+              <p class="text-muted mt-3 mb-2" i18n>Tier 1 — Emergency Fund</p>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label i18n>Deployed Capital (CAD)</mat-label>
+                <mat-label i18n>Cash Reserve</mat-label>
+                <input matInput type="number" [(ngModel)]="plan.cashReserve" />
+                <mat-hint i18n>Short-term living essentials; synced to Emergency Fund</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="w-100 mt-2">
+                <mat-label i18n>Cash Buffer</mat-label>
+                <input matInput type="number" [(ngModel)]="plan.cashBuffer" />
+                <mat-hint i18n>Low-probability high-impact events reserve</mat-hint>
+              </mat-form-field>
+
+              <p class="text-muted mt-3 mb-2" i18n>Tier 2 — Capital Preservation Bucket</p>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Preservation Target (CAD)</mat-label>
+                <input matInput type="number" [(ngModel)]="plan.preservationBucket" />
+                <mat-hint i18n>Buffer for market drawdowns or life events</mat-hint>
+              </mat-form-field>
+
+              <p class="text-muted mt-3 mb-2" i18n>Tier 3 — Investment Layer</p>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Long-term Growth Target</mat-label>
+                <input matInput type="number" [(ngModel)]="plan.longTermGrowthTarget" />
+                <mat-hint
+                  class="hint-truncate"
+                  i18n-matTooltip
+                  matTooltip="Theoretical equity allocation; excess over deployed capital drives one-time top-up plan"
+                  matTooltipShowDelay="0"
+                  i18n
+                >Equity target; excess over deployed → top-up plan...</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="w-100 mt-2">
+                <mat-label i18n>SIP Monthly Budget</mat-label>
+                <input matInput type="number" [(ngModel)]="plan.sipMonthlyBudget" />
+                <mat-hint
+                  class="hint-truncate"
+                  i18n-matTooltip
+                  matTooltip="Monthly disposable income available for DCA; influences rebalancing decisions"
+                  matTooltipShowDelay="0"
+                  i18n
+                >Disposable monthly income for DCA...</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="w-100 mt-3">
+                <mat-label i18n>Deployed Capital</mat-label>
                 <input
                   matInput
                   readonly
@@ -67,13 +112,17 @@
                 />
                 <mat-hint i18n>Auto-calculated from your transaction history</mat-hint>
               </mat-form-field>
-              @if (plan.capitalPool > 0) {
-                <p class="text-muted mt-3">
-                  <span i18n>Remaining:</span>
+              @if (plan.longTermGrowthTarget > 0) {
+                <p class="mt-2 mb-0" [class.text-danger]="plan.deployedCapital > plan.longTermGrowthTarget" [class.text-muted]="plan.deployedCapital <= plan.longTermGrowthTarget">
+                  <span i18n>Gap (Target − Deployed):</span>
                   <strong>
-                    {{ plan.capitalPool - plan.deployedCapital | number: '1.0-0' }} CAD
+                    {{ plan.longTermGrowthTarget - plan.deployedCapital | number: '1.0-0' }} CAD
                   </strong>
-                  ({{ ((plan.capitalPool - plan.deployedCapital) / plan.capitalPool) * 100 | number: '1.0-1' }}%)
+                  @if (plan.deployedCapital > plan.longTermGrowthTarget) {
+                    <span class="ms-1 text-danger" i18n>(Overweight — consider trimming)</span>
+                  } @else {
+                    <span class="ms-1" i18n>(Top-up needed)</span>
+                  }
                 </p>
               }
             </mat-card-content>
@@ -192,7 +241,7 @@
                     >
                   </div>
                   <button
-                    class="flex-shrink-0 me-n2"
+                    class="flex-shrink-0"
                     color="warn"
                     mat-icon-button
                     (click)="onDeleteAllocation(a.symbol)"

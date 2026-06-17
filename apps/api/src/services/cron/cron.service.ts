@@ -121,7 +121,8 @@ export class CronService {
           await this.rebalancingService.generateRebalancingSignals(
             plan.id,
             plan.allocations,
-            holdings
+            holdings,
+            plan.longTermGrowthTarget ?? 0
           );
         } catch {
           // ignore if portfolio data unavailable for this user

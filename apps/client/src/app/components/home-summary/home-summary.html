@@ -11,6 +11,7 @@
             [hasPermissionToUpdateUserSettings]="
               !hasImpersonationId() && hasPermissionToUpdateUserSettings()
             "
+            [investmentPlan]="investmentPlan()"
             [isLoading]="isLoading()"
             [language]="user()?.settings?.language"
             [locale]="user()?.settings?.locale"

@@ -33,10 +33,15 @@ export class InvestmentPlanService {
     return this.prismaService.investmentPlan.upsert({
       create: {
         capitalPool: data.capitalPool as number,
+        cashBuffer: (data.cashBuffer as number) ?? 0,
+        cashReserve: (data.cashReserve as number) ?? 0,
         deployedCapital: (data.deployedCapital as number) ?? 0,
         emailEnabled: (data.emailEnabled as boolean) ?? false,
+        longTermGrowthTarget: (data.longTermGrowthTarget as number) ?? 0,
         notifyEmail: data.notifyEmail as string | undefined,
         notifyLanguage: (data.notifyLanguage as string) ?? 'en',
+        preservationBucket: (data.preservationBucket as number) ?? 0,
+        sipMonthlyBudget: (data.sipMonthlyBudget as number) ?? 0,
         userId
       },
       update: data,
@@ -105,6 +110,26 @@ export class InvestmentPlanService {
     return this.prismaService.investmentSignal.update({
       data: { status },
       where: { id }
+    });
+  }
+
+  public async syncEmergencyFundToUserSettings(
+    userId: string,
+    cashReserve: number
+  ): Promise<void> {
+    const existing = await this.prismaService.settings.findUnique({
+      where: { userId }
+    });
+    const current = (existing?.settings as Record<string, unknown>) ?? {};
+    await this.prismaService.settings.upsert({
+      create: {
+        settings: { ...current, emergencyFund: cashReserve } as any,
+        user: { connect: { id: userId } }
+      },
+      update: {
+        settings: { ...current, emergencyFund: cashReserve } as any
+      },
+      where: { userId }
     });
   }
 

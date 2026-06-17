@@ -37,6 +37,13 @@ export class GfPortfolioSummaryComponent implements OnChanges {
   @Input() isLoading: boolean;
   @Input() language: string;
   @Input() locale = getLocale();
+  @Input() investmentPlan: {
+    cashBuffer: number;
+    cashReserve: number;
+    longTermGrowthTarget: number;
+    preservationBucket: number;
+    sipMonthlyBudget: number;
+  } | null = null;
   @Input() summary: PortfolioSummary;
   @Input() user: User;
 

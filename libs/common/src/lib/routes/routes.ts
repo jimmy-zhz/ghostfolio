@@ -138,8 +138,8 @@ export const internalRoutes = {
         title: $localize`Allocations`
       },
       analysis: {
-        path: undefined, // Default sub route
-        routerLink: ['/portfolio'],
+        path: 'analysis',
+        routerLink: ['/portfolio', 'analysis'],
         title: $localize`Analysis`
       },
       fire: {

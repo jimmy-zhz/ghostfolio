@@ -11,6 +11,11 @@ export const routes: Routes = [
     children: [
       {
         path: '',
+        pathMatch: 'full',
+        redirectTo: internalRoutes.portfolio.subRoutes.investmentPlan.path
+      },
+      {
+        path: internalRoutes.portfolio.subRoutes.analysis.path,
         loadChildren: () =>
           import('./analysis/analysis-page.routes').then((m) => m.routes)
       },

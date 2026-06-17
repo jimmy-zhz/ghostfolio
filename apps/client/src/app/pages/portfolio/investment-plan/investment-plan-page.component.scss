@@ -52,6 +52,15 @@
   }
 }
 
+.hint-truncate {
+  cursor: help;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dca-shortcut-btn {
   font-size: 12px;
   height: 24px;

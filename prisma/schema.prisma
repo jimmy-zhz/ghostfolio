@@ -365,19 +365,25 @@ enum ViewMode {
 // ── Investment Plan ───────────────────────────────────────────────────────────
 
 model InvestmentPlan {
-  id                String                    @id @default(uuid())
-  capitalPool       Float
-  deployedCapital   Float                     @default(0)
-  notifyEmail       String?
-  notifyLanguage    String                    @default("en")
-  emailEnabled      Boolean                   @default(false)
-  createdAt         DateTime                  @default(now())
-  updatedAt         DateTime                  @updatedAt
-  user              User                      @relation(fields: [userId], onDelete: Cascade, references: [id])
-  userId            String                    @unique
-  allocations       InvestmentPlanAllocation[]
-  dcaSchedules      DcaSchedule[]
-  signals           InvestmentSignal[]
+  id                   String                    @id @default(uuid())
+  capitalPool          Float
+  deployedCapital      Float                     @default(0)
+  notifyEmail          String?
+  notifyLanguage       String                    @default("en")
+  emailEnabled         Boolean                   @default(false)
+  // Capital pool tiers
+  cashReserve          Float                     @default(0)
+  cashBuffer           Float                     @default(0)
+  preservationBucket   Float                     @default(0)
+  longTermGrowthTarget Float                     @default(0)
+  sipMonthlyBudget     Float                     @default(0)
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  user                 User                      @relation(fields: [userId], onDelete: Cascade, references: [id])
+  userId               String                    @unique
+  allocations          InvestmentPlanAllocation[]
+  dcaSchedules         DcaSchedule[]
+  signals              InvestmentSignal[]
 }
 
 model InvestmentPlanAllocation {

@@ -20,6 +20,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { catchError, of, timeout } from 'rxjs';
 
 interface Allocation {
@@ -56,6 +57,7 @@ export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
     MatInputModule,
     MatSelectModule,
     MatSnackBarModule,
+    MatTooltipModule,
     ReactiveFormsModule
   ],
   selector: 'gf-investment-plan-page',
@@ -83,14 +85,24 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   };
   public plan: {
     capitalPool: number;
+    cashBuffer: number;
+    cashReserve: number;
     deployedCapital: number;
+    longTermGrowthTarget: number;
     notifyEmail: string;
     notifyLanguage: string;
+    preservationBucket: number;
+    sipMonthlyBudget: number;
   } = {
     capitalPool: 0,
+    cashBuffer: 0,
+    cashReserve: 0,
     deployedCapital: 0,
+    longTermGrowthTarget: 0,
     notifyEmail: '',
-    notifyLanguage: 'en'
+    notifyLanguage: 'en',
+    preservationBucket: 0,
+    sipMonthlyBudget: 0
   };
   public aiReport = '';
   public isCopyingPrompt = false;
@@ -280,9 +292,14 @@ export class GfInvestmentPlanPageComponent implements OnInit {
         if (plan) {
           this.plan = {
             capitalPool: plan.capitalPool,
+            cashBuffer: plan.cashBuffer ?? 0,
+            cashReserve: plan.cashReserve ?? 0,
             deployedCapital: plan.deployedCapital,
+            longTermGrowthTarget: plan.longTermGrowthTarget ?? 0,
             notifyEmail: plan.notifyEmail ?? '',
-            notifyLanguage: plan.notifyLanguage
+            notifyLanguage: plan.notifyLanguage,
+            preservationBucket: plan.preservationBucket ?? 0,
+            sipMonthlyBudget: plan.sipMonthlyBudget ?? 0
           };
           this.emailEnabled = plan.emailEnabled;
           this.allocations = plan.allocations ?? [];
