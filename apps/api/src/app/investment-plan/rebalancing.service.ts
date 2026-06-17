@@ -81,15 +81,16 @@ export class RebalancingService {
     const result = await this.calculateRebalancing(allocations, holdings);
     if (!result.hasTriggered) return;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date();
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
 
     for (const action of result.actions) {
       if (action.type === 'OK') continue;
 
       const existing = await this.prismaService.investmentSignal.findFirst({
         where: {
-          date: { gte: today },
+          date: { gte: startOfWeek },
           planId,
           symbol: action.symbol,
           type: action.type === 'BUY' ? SignalType.REBALANCE_BUY : SignalType.REBALANCE_SELL

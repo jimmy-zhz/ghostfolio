@@ -1,48 +1,79 @@
 <div class="container">
-  <h1 class="text-center my-4">投资计划</h1>
+  <div class="row">
+    <div class="col">
+      <h1 class="d-none d-sm-block h3 mb-3 text-center" i18n>Investment Plan</h1>
+    </div>
+  </div>
 
-  <mat-tab-group>
-    <!-- ── Tab 1: 基本设置 ── -->
-    <mat-tab label="设置">
+  <div class="ip-tabs">
+    <button
+      class="ip-tab-btn"
+      mat-button
+      [class.active]="activeTab === 'settings'"
+      (click)="setTab('settings')"
+      i18n
+    >
+      Settings
+    </button>
+    <button
+      class="ip-tab-btn"
+      mat-button
+      [class.active]="activeTab === 'rebalancing'"
+      (click)="setTab('rebalancing')"
+      i18n
+    >
+      Rebalancing
+    </button>
+    <button
+      class="ip-tab-btn"
+      mat-button
+      [class.active]="activeTab === 'dca'"
+      (click)="setTab('dca')"
+    >
+      DCA
+    </button>
+    <button
+      class="ip-tab-btn"
+      mat-button
+      [class.active]="activeTab === 'signals'"
+      (click)="setTab('signals')"
+      i18n
+    >
+      Signals
+    </button>
+  </div>
+
+  <div class="tab-content">
+    <!-- ── Settings ── -->
+    @if (activeTab === 'settings') {
       <div class="row mt-4">
         <div class="col-md-6">
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>本金池</mat-card-title>
+              <mat-card-title i18n>Capital Pool</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>总本金（CAD）</mat-label>
-                <input
-                  matInput
-                  placeholder="如 27000"
-                  type="number"
-                  [(ngModel)]="plan.capitalPool"
-                />
+                <mat-label i18n>Total Capital (CAD)</mat-label>
+                <input matInput type="number" [(ngModel)]="plan.capitalPool" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>已投金额（CAD）</mat-label>
+                <mat-label i18n>Deployed Capital (CAD)</mat-label>
                 <input
                   matInput
                   readonly
                   type="number"
                   [value]="plan.deployedCapital"
                 />
-                <mat-hint>由系统根据交易记录自动计算</mat-hint>
+                <mat-hint i18n>Auto-calculated from your transaction history</mat-hint>
               </mat-form-field>
               @if (plan.capitalPool > 0) {
-                <p class="text-muted">
-                  剩余可用：<strong
-                    >{{
-                      plan.capitalPool - plan.deployedCapital | number: '1.0-0'
-                    }}
-                    CAD</strong
-                  >
-                  （{{
-                    ((plan.capitalPool - plan.deployedCapital) /
-                      plan.capitalPool) *
-                      100 | number: '1.0-1'
-                  }}%）
+                <p class="text-muted mt-3">
+                  <span i18n>Remaining:</span>
+                  <strong>
+                    {{ plan.capitalPool - plan.deployedCapital | number: '1.0-0' }} CAD
+                  </strong>
+                  ({{ ((plan.capitalPool - plan.deployedCapital) / plan.capitalPool) * 100 | number: '1.0-1' }}%)
                 </p>
               }
             </mat-card-content>
@@ -52,27 +83,20 @@
         <div class="col-md-6">
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>邮件通知</mat-card-title>
+              <mat-card-title i18n>Email Notifications</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
-              <mat-checkbox class="mb-3" [(ngModel)]="emailEnabled"
-                >启用邮件通知</mat-checkbox
+              <mat-checkbox class="mb-3" [(ngModel)]="emailEnabled" i18n
+                >Enable email notifications</mat-checkbox
               >
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>通知邮箱</mat-label>
+                <mat-label i18n>Notification email</mat-label>
                 <input
                   matInput
                   placeholder="your@gmail.com"
                   type="email"
                   [(ngModel)]="plan.notifyEmail"
                 />
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="w-100">
-                <mat-label>邮件语言</mat-label>
-                <mat-select [(ngModel)]="plan.notifyLanguage">
-                  <mat-option value="zh">中文</mat-option>
-                  <mat-option value="en">English</mat-option>
-                </mat-select>
               </mat-form-field>
             </mat-card-content>
           </mat-card>
@@ -81,45 +105,34 @@
 
       <div class="row mt-3">
         <div class="col text-end">
-          <button color="primary" mat-flat-button (click)="onSavePlan()">
-            保存设置
+          <button color="primary" mat-flat-button (click)="onSavePlan()" i18n>
+            Save settings
           </button>
         </div>
       </div>
-    </mat-tab>
+    }
 
-    <!-- ── Tab 2: 目标配比（方案二）── -->
-    <mat-tab label="再平衡">
+    <!-- ── Rebalancing ── -->
+    @if (activeTab === 'rebalancing') {
       <div class="row mt-4">
         <div class="col-md-6">
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>添加目标配比</mat-card-title>
+              <mat-card-title i18n>Add Target Allocation</mat-card-title>
               @if (totalAllocationWeight > 0) {
                 <mat-card-subtitle
-                  >当前合计：{{
-                    totalAllocationWeight | number: '1.0-1'
-                  }}%</mat-card-subtitle
+                  ><span i18n>Total weight:</span>
+                  {{ totalAllocationWeight | number: '1.0-1' }}%</mat-card-subtitle
                 >
               }
             </mat-card-header>
             <mat-card-content class="py-3">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>ETF 代码</mat-label>
-                <input
-                  matInput
-                  placeholder="如 XUS.TO"
-                  [matAutocomplete]="allocationSymbolAuto"
-                  [(ngModel)]="newAllocation.symbol"
-                />
-                <mat-autocomplete #allocationSymbolAuto="matAutocomplete">
-                  @for (sym of filterSymbols(newAllocation.symbol); track sym) {
-                    <mat-option [value]="sym">{{ sym }}</mat-option>
-                  }
-                </mat-autocomplete>
+                <mat-label i18n>Name, symbol or ISIN</mat-label>
+                <gf-symbol-autocomplete [formControl]="allocationSymbolControl" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>目标占比 %</mat-label>
+                <mat-label i18n>Target weight %</mat-label>
                 <input
                   matInput
                   max="100"
@@ -129,7 +142,7 @@
                 />
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>触发阈值 %（默认 5%）</mat-label>
+                <mat-label i18n>Rebalance threshold % (default 5%)</mat-label>
                 <input
                   matInput
                   max="20"
@@ -137,27 +150,86 @@
                   type="number"
                   [(ngModel)]="newAllocation.rebalanceThreshold"
                 />
-                <mat-hint>偏差超过此值时触发再平衡建议</mat-hint>
+                <mat-hint i18n>Triggers a rebalance suggestion when deviation exceeds this value</mat-hint>
               </mat-form-field>
               <button
                 color="primary"
                 mat-stroked-button
                 (click)="onAddAllocation()"
+                i18n
               >
-                添加
+                Add
               </button>
             </mat-card-content>
           </mat-card>
         </div>
 
         <div class="col-md-6">
+          @if (rebalancingResult) {
+            <mat-card appearance="outlined" class="mb-3">
+              <mat-card-header>
+                <mat-card-title>
+                  <span i18n>Rebalancing suggestions</span>
+                  @if (rebalancingResult.hasTriggered) {
+                    <span class="badge bg-warning text-dark ms-2" i18n>Action needed</span>
+                  } @else {
+                    <span class="badge bg-success ms-2" i18n>Balanced</span>
+                  }
+                </mat-card-title>
+                <mat-card-subtitle
+                  ><span i18n>Total holdings:</span>
+                  {{ rebalancingResult.totalValue | number: '1.0-0' }} CAD</mat-card-subtitle
+                >
+              </mat-card-header>
+              <mat-card-content class="py-2">
+                @for (action of rebalancingResult.actions; track action.symbol) {
+                  <div
+                    class="d-flex justify-content-between align-items-center py-1 border-bottom"
+                  >
+                    <div>
+                      <strong>{{ action.symbol }}</strong>
+                      <span class="text-muted ms-1"
+                        >{{ action.currentWeight | number: '1.0-1' }}% →
+                        {{ action.targetWeight }}%</span
+                      >
+                    </div>
+                    <div>
+                      @if (action.type === 'BUY') {
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="text-success" i18n
+                            >Buy ${{ action.amount | number: '1.0-0' }}</span
+                          >
+                          <button
+                            class="dca-shortcut-btn"
+                            mat-stroked-button
+                            color="primary"
+                            (click)="prefillDcaFromRebalance(action)"
+                            i18n
+                          >
+                            DCA →
+                          </button>
+                        </div>
+                      } @else if (action.type === 'SELL') {
+                        <span class="text-danger" i18n
+                          >Sell ${{ action.amount | number: '1.0-0' }}</span
+                        >
+                      } @else {
+                        <span class="text-muted" i18n>Balanced ✓</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </mat-card-content>
+            </mat-card>
+          }
+
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>已配置</mat-card-title>
+              <mat-card-title i18n>Configured allocations</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
               @if (allocations.length === 0) {
-                <p class="text-muted">尚未配置目标配比</p>
+                <p class="text-muted" i18n>No target allocations configured yet.</p>
               }
               @for (a of allocations; track a.symbol) {
                 <div
@@ -166,8 +238,8 @@
                   <div>
                     <strong>{{ a.symbol }}</strong>
                     <span class="text-muted ms-2"
-                      >目标 {{ a.targetWeight }}% · 阈值
-                      {{ a.rebalanceThreshold }}%</span
+                      ><span i18n>Target</span> {{ a.targetWeight }}% ·
+                      <span i18n>Threshold</span> {{ a.rebalanceThreshold }}%</span
                     >
                   </div>
                   <button
@@ -181,115 +253,42 @@
               }
             </mat-card-content>
           </mat-card>
-
-          @if (rebalancingResult) {
-            <mat-card appearance="outlined" class="mt-3">
-              <mat-card-header>
-                <mat-card-title>
-                  再平衡建议
-                  @if (rebalancingResult.hasTriggered) {
-                    <span class="badge bg-warning text-dark ms-2">需操作</span>
-                  } @else {
-                    <span class="badge bg-success ms-2">平衡</span>
-                  }
-                </mat-card-title>
-                <mat-card-subtitle
-                  >总持仓：{{
-                    rebalancingResult.totalValue | number: '1.0-0'
-                  }}
-                  CAD</mat-card-subtitle
-                >
-              </mat-card-header>
-              <mat-card-content class="py-2">
-                @for (
-                  action of rebalancingResult.actions;
-                  track action.symbol
-                ) {
-                  <div
-                    class="d-flex justify-content-between align-items-center py-1 border-bottom"
-                  >
-                    <div>
-                      <strong>{{ action.symbol }}</strong>
-                      <span class="text-muted ms-1"
-                        >{{ action.currentWeight | number: '1.0-1' }}% →
-                        {{ action.targetWeight }}%</span
-                      >
-                    </div>
-                    <div>
-                      @if (action.type === 'BUY') {
-                        <span class="text-success"
-                          >买入 ${{ action.amount | number: '1.0-0' }}</span
-                        >
-                      } @else if (action.type === 'SELL') {
-                        <span class="text-danger"
-                          >卖出 ${{ action.amount | number: '1.0-0' }}</span
-                        >
-                      } @else {
-                        <span class="text-muted">平衡 ✓</span>
-                      }
-                    </div>
-                  </div>
-                }
-              </mat-card-content>
-            </mat-card>
-          }
         </div>
       </div>
-    </mat-tab>
+    }
 
-    <!-- ── Tab 3: DCA 计划（方案一）── -->
-    <mat-tab label="DCA">
+    <!-- ── DCA ── -->
+    @if (activeTab === 'dca') {
       <div class="row mt-4">
         <div class="col-md-6">
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>添加 DCA 计划</mat-card-title>
+              <mat-card-title i18n>Add DCA Schedule</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>ETF 代码</mat-label>
-                <input
-                  matInput
-                  placeholder="如 XEF.TO"
-                  [matAutocomplete]="dcaSymbolAuto"
-                  [(ngModel)]="newDca.symbol"
-                />
-                <mat-autocomplete #dcaSymbolAuto="matAutocomplete">
-                  @for (sym of filterSymbols(newDca.symbol); track sym) {
-                    <mat-option [value]="sym">{{ sym }}</mat-option>
-                  }
-                </mat-autocomplete>
+                <mat-label i18n>Name, symbol or ISIN</mat-label>
+                <gf-symbol-autocomplete [formControl]="dcaSymbolControl" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>每周预算（CAD）</mat-label>
-                <input
-                  matInput
-                  type="number"
-                  [(ngModel)]="newDca.weeklyBudget"
-                />
+                <mat-label i18n>Weekly budget (CAD)</mat-label>
+                <input matInput type="number" [(ngModel)]="newDca.weeklyBudget" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>总预算（可选）</mat-label>
-                <input
-                  matInput
-                  type="number"
-                  [(ngModel)]="newDca.totalBudget"
-                />
-                <mat-hint>建仓总额，留空表示持续加仓</mat-hint>
+                <mat-label i18n>Total budget (optional)</mat-label>
+                <input matInput type="number" [(ngModel)]="newDca.totalBudget" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>信号策略</mat-label>
+                <mat-label i18n>Signal strategy</mat-label>
                 <mat-select [(ngModel)]="newDca.signalType">
-                  <mat-option value="MA5"
-                    >5日均线（价格低于均线时买）</mat-option
-                  >
-                  <mat-option value="RSI">RSI（低于 40 时买）</mat-option>
-                  <mat-option value="COMBINED">组合（均线 + RSI）</mat-option>
-                  <mat-option value="FIXED">固定（每周固定日买）</mat-option>
+                  <mat-option value="MA5" i18n>5-day MA (buy when price is below MA)</mat-option>
+                  <mat-option value="RSI" i18n>RSI (buy when RSI below 40)</mat-option>
+                  <mat-option value="COMBINED" i18n>Combined (MA + RSI)</mat-option>
+                  <mat-option value="FIXED" i18n>Fixed (buy on a fixed weekday)</mat-option>
                 </mat-select>
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>兜底日（1=周一，5=周五）</mat-label>
+                <mat-label i18n>Fallback day (1=Mon, 5=Fri)</mat-label>
                 <input
                   matInput
                   max="5"
@@ -297,46 +296,75 @@
                   type="number"
                   [(ngModel)]="newDca.deadlineDay"
                 />
-                <mat-hint>到该天若还未买入则强制执行</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label>开始日期</mat-label>
+                <mat-label i18n>Start date</mat-label>
                 <input matInput type="date" [(ngModel)]="newDca.startDate" />
               </mat-form-field>
-              <button color="primary" mat-stroked-button (click)="onAddDca()">
-                添加计划
+              <button color="primary" mat-stroked-button (click)="onAddDca()" i18n>
+                Add schedule
               </button>
             </mat-card-content>
           </mat-card>
         </div>
 
         <div class="col-md-6">
+          <mat-card appearance="outlined" class="mb-3">
+            <mat-card-header>
+              <mat-card-title i18n>AI Investment Analysis</mat-card-title>
+              <mat-card-subtitle i18n>Based on your rebalancing plan + DCA schedules + current holdings</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content class="py-3">
+              @if (aiReport) {
+                <div class="ai-report-content" [innerHTML]="aiReport"></div>
+              } @else {
+                <div class="ai-report-placeholder">
+                  Click Generate to get an AI summary of your investment plan, suggested actions, and market timing insights.
+                </div>
+              }
+            </mat-card-content>
+            <mat-card-actions class="d-flex justify-content-end gap-2" style="padding: 12px 16px 16px">
+              <button
+                mat-stroked-button
+                [disabled]="isCopyingPrompt"
+                (click)="onCopyPrompt()"
+                i18n
+              >
+                {{ isCopyingPrompt ? 'Copying...' : 'Copy Prompt' }}
+              </button>
+              <button
+                color="primary"
+                mat-flat-button
+                [disabled]="isGeneratingReport"
+                (click)="onGenerateReport()"
+                i18n
+              >
+                {{ isGeneratingReport ? 'Generating...' : 'Generate Report' }}
+              </button>
+            </mat-card-actions>
+          </mat-card>
+
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>已配置计划</mat-card-title>
+              <mat-card-title i18n>Configured schedules</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
               @if (dcaSchedules.length === 0) {
-                <p class="text-muted">尚未配置 DCA 计划</p>
+                <p class="text-muted" i18n>No DCA schedules configured yet.</p>
               }
               @for (dca of dcaSchedules; track dca.id) {
                 <div class="border rounded p-3 mb-2">
                   <div class="d-flex justify-content-between">
                     <strong>{{ dca.symbol }}</strong>
-                    <button
-                      color="warn"
-                      mat-icon-button
-                      (click)="onDeleteDca(dca.id)"
-                    >
+                    <button color="warn" mat-icon-button (click)="onDeleteDca(dca.id)">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
                   <div class="text-muted small">
-                    ${{ dca.weeklyBudget }}/周 · {{ dca.signalType }} · 兜底周{{
-                      dca.deadlineDay
-                    }}
+                    ${{ dca.weeklyBudget }}/week · {{ dca.signalType }} ·
+                    <span i18n>Fallback</span> {{ dca.deadlineDay }}
                     @if (dca.totalBudget) {
-                      · 总预算 ${{ dca.totalBudget }}
+                      · <span i18n>Budget</span> ${{ dca.totalBudget }}
                     }
                   </div>
                 </div>
@@ -345,22 +373,21 @@
           </mat-card>
         </div>
       </div>
-    </mat-tab>
+    }
 
-    <!-- ── Tab 4: 信号历史 ── -->
-    <mat-tab label="信号">
+    <!-- ── Signals ── -->
+    @if (activeTab === 'signals') {
       <div class="row mt-4">
         <div class="col">
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title>近期投资信号</mat-card-title>
-              <mat-card-subtitle>每个工作日早上 9 点自动生成</mat-card-subtitle>
+              <mat-card-title i18n>Recent investment signals</mat-card-title>
+              <mat-card-subtitle i18n>Generated automatically each weekday at 9 AM</mat-card-subtitle>
             </mat-card-header>
             <mat-card-content class="py-3">
               @if (signals.length === 0) {
-                <p class="text-muted">
-                  暂无信号记录。系统会在工作日早上 9
-                  点（服务器时间）自动分析并生成。
+                <p class="text-muted" i18n>
+                  No signals yet. The system will analyse and generate them automatically on weekdays at 9 AM (server time).
                 </p>
               }
               @for (signal of signals; track signal.id) {
@@ -370,9 +397,7 @@
                   <div>
                     <div>
                       <strong>{{ signal.symbol }}</strong>
-                      <span class="ms-2">{{
-                        signalTypeLabel(signal.type)
-                      }}</span>
+                      <span class="ms-2">{{ signalTypeLabel(signal.type) }}</span>
                       @if (signal.amount > 0) {
                         <span class="ms-2 text-primary"
                           >${{ signal.amount | number: '1.0-0' }}</span
@@ -390,14 +415,12 @@
                         color="primary"
                         mat-stroked-button
                         (click)="onExecuteSignal(signal.id)"
+                        i18n
                       >
-                        已执行
+                        Executed
                       </button>
-                      <button
-                        mat-stroked-button
-                        (click)="onDismissSignal(signal.id)"
-                      >
-                        忽略
+                      <button mat-stroked-button (click)="onDismissSignal(signal.id)" i18n>
+                        Dismiss
                       </button>
                     </div>
                   } @else {
@@ -405,8 +428,9 @@
                       class="badge ms-3"
                       [class.bg-secondary]="signal.status === 'DISMISSED'"
                       [class.bg-success]="signal.status === 'EXECUTED'"
+                      i18n
                     >
-                      {{ signal.status === 'EXECUTED' ? '已执行' : '已忽略' }}
+                      {{ signal.status === 'EXECUTED' ? 'Executed' : 'Dismissed' }}
                     </span>
                   }
                 </div>
@@ -415,6 +439,6 @@
           </mat-card>
         </div>
       </div>
-    </mat-tab>
-  </mat-tab-group>
+    }
+  </div>
 </div>

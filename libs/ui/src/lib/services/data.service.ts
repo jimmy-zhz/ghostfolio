@@ -876,13 +876,33 @@ export class DataService {
   }
 
   public fetchAiConfig() {
-    return this.http.get<{ apiKey: string; hasApiKey: boolean; model: string }>(
-      '/api/v1/ai/config'
-    );
+    return this.http.get<{
+      apiKey: string;
+      apiUrl: string;
+      hasApiKey: boolean;
+      model: string;
+      responseLanguage: string;
+      testedModels: string[];
+    }>('/api/v1/ai/config');
   }
 
-  public putAiConfig(data: { apiKey?: string; model?: string }) {
+  public putAiConfig(data: { apiKey?: string; apiUrl?: string; model?: string; responseLanguage?: string }) {
     return this.http.put<{ success: boolean }>('/api/v1/ai/config', data);
+  }
+
+  public generateInvestmentAiReport() {
+    return this.http.post<{ report: string }>('/api/v1/investment-plan/ai-report', {});
+  }
+
+  public fetchInvestmentAiPrompt() {
+    return this.http.post<{ prompt: string }>('/api/v1/investment-plan/ai-prompt', {});
+  }
+
+  public testAiConnection(data: { apiKey?: string; apiUrl?: string; model: string; responseLanguage?: string }) {
+    return this.http.post<{ error?: string; message?: string; success: boolean }>(
+      '/api/v1/ai/test',
+      data
+    );
   }
 
   public putHoldingTags({

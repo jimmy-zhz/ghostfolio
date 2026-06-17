@@ -34,6 +34,42 @@
       </mat-card>
     </div>
   </div>
+  <div class="row">
+    <div class="col-md-12">
+      <mat-card appearance="outlined" class="mb-3">
+        <mat-card-header class="overflow-hidden w-100">
+          <mat-card-title class="align-items-center d-flex text-truncate">
+            <ng-container i18n>By Holding</ng-container>
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="by-holding-content d-flex align-items-center">
+            <div class="by-holding-chart">
+              <gf-portfolio-proportion-chart
+                cursor="pointer"
+                [baseCurrency]="user?.settings?.baseCurrency"
+                [colorScheme]="user?.settings?.colorScheme"
+                [data]="symbols"
+                [isInPercentage]="showValuesInPercentage()"
+                [keys]="['symbol']"
+                [locale]="user?.settings?.locale"
+                [showLabels]="false"
+                (proportionChartClicked)="onSymbolChartClicked($event)"
+              />
+            </div>
+            <div class="by-holding-list ml-3">
+              @for (item of sortedSymbolList; track item.symbol) {
+                <div class="d-flex align-items-center justify-content-between py-1 border-bottom">
+                  <span class="font-weight-bold">{{ item.symbol }}</span>
+                  <span class="text-muted">{{ item.percentage < 1 ? '~' : '' }}{{ item.percentage | number:'1.0-0' }}%</span>
+                </div>
+              }
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
   <div class="proportion-charts row">
     <div class="col-md-4">
       <mat-card appearance="outlined" class="mb-3">
@@ -94,29 +130,6 @@
             [isInPercentage]="showValuesInPercentage()"
             [keys]="['assetClassLabel', 'assetSubClassLabel']"
             [locale]="user?.settings?.locale"
-          />
-        </mat-card-content>
-      </mat-card>
-    </div>
-    <div class="col-md-12 allocations-by-symbol">
-      <mat-card appearance="outlined" class="mb-3">
-        <mat-card-header class="overflow-hidden w-100">
-          <mat-card-title class="align-items-center d-flex text-truncate">
-            <ng-container i18n>By Holding</ng-container>
-          </mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <gf-portfolio-proportion-chart
-            class="mx-auto"
-            cursor="pointer"
-            [baseCurrency]="user?.settings?.baseCurrency"
-            [colorScheme]="user?.settings?.colorScheme"
-            [data]="symbols"
-            [isInPercentage]="showValuesInPercentage()"
-            [keys]="['symbol']"
-            [locale]="user?.settings?.locale"
-            [showLabels]="deviceType !== 'mobile'"
-            (proportionChartClicked)="onSymbolChartClicked($event)"
           />
         </mat-card-content>
       </mat-card>

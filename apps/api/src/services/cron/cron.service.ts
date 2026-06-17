@@ -1,5 +1,7 @@
 import { DcaSignalService } from '@ghostfolio/api/app/investment-plan/dca-signal.service';
 import { InvestmentPlanService } from '@ghostfolio/api/app/investment-plan/investment-plan.service';
+import { RebalancingService } from '@ghostfolio/api/app/investment-plan/rebalancing.service';
+import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { MailService } from '@ghostfolio/api/services/mail/mail.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
@@ -31,7 +33,9 @@ export class CronService {
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly investmentPlanService: InvestmentPlanService,
     private readonly mailService: MailService,
+    private readonly portfolioService: PortfolioService,
     private readonly propertyService: PropertyService,
+    private readonly rebalancingService: RebalancingService,
     private readonly statisticsGatheringService: StatisticsGatheringService,
     private readonly twitterBotService: TwitterBotService,
     private readonly userService: UserService
@@ -102,8 +106,29 @@ export class CronService {
     const plans = await this.investmentPlanService.getAllActivePlans();
 
     for (const plan of plans) {
+      // 1. Generate DCA signals
       await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
 
+      // 2. Generate Rebalancing signals (at most once per week, deduped in service)
+      if (plan.allocations?.length > 0) {
+        try {
+          const { holdings } = await this.portfolioService.getDetails({
+            filters: [],
+            impersonationId: undefined,
+            userId: plan.userId,
+            withMarkets: false
+          });
+          await this.rebalancingService.generateRebalancingSignals(
+            plan.id,
+            plan.allocations,
+            holdings
+          );
+        } catch {
+          // ignore if portfolio data unavailable for this user
+        }
+      }
+
+      // 3. Send email with all pending actionable signals
       if (plan.emailEnabled && plan.notifyEmail) {
         const signals = await this.investmentPlanService.getPendingSignals(plan.id);
         const actionableSignals = signals.filter(
@@ -111,11 +136,30 @@ export class CronService {
         );
 
         if (actionableSignals.length > 0) {
+          // Gather holdings summary for AI prompt context
+          let portfolioSummary: { symbol: string; currentWeight: number; value: number }[] = [];
+          try {
+            const { holdings } = await this.portfolioService.getDetails({
+              filters: [],
+              impersonationId: undefined,
+              userId: plan.userId,
+              withMarkets: false
+            });
+            const totalValue = Object.values(holdings).reduce(
+              (sum: number, h: any) => sum + (h.valueInBaseCurrency ?? 0),
+              0
+            );
+            portfolioSummary = Object.entries(holdings).map(([symbol, h]: [string, any]) => ({
+              currentWeight: totalValue > 0 ? (h.valueInBaseCurrency / totalValue) * 100 : 0,
+              symbol,
+              value: h.valueInBaseCurrency ?? 0
+            }));
+          } catch {}
+
           const sent = await this.mailService.sendInvestmentSignalEmail(
             plan.notifyEmail,
-            plan.notifyLanguage,
             actionableSignals,
-            []
+            portfolioSummary
           );
 
           if (sent) {

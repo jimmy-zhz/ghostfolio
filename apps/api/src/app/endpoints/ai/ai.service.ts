@@ -42,6 +42,85 @@ export class AiService {
     private readonly propertyService: PropertyService
   ) {}
 
+  private static readonly LANGUAGE_LABELS: Record<string, string> = {
+    de: 'German',
+    en: 'English',
+    fr: 'French',
+    ja: 'Japanese',
+    ko: 'Korean',
+    zh: 'Chinese'
+  };
+
+  public async testConnection({
+    apiKey,
+    apiUrl,
+    model,
+    responseLanguage = 'auto'
+  }: {
+    apiKey: string;
+    apiUrl: string;
+    model: string;
+    responseLanguage?: string;
+  }): Promise<{ message?: string; success: boolean; error?: string }> {
+    try {
+      const isGemini = apiUrl.includes('googleapis.com') || apiUrl.includes('generativelanguage');
+
+      const langLabel = responseLanguage === 'auto'
+        ? null
+        : AiService.LANGUAGE_LABELS[responseLanguage] ?? responseLanguage;
+      const langInstruction = langLabel ? ` Reply in ${langLabel} only.` : '';
+      const testPrompt = `Say "hi" in one word.${langInstruction}`;
+
+      let url: string;
+      let requestBody: string;
+      let headers: Record<string, string>;
+
+      if (isGemini) {
+        // Gemini API: POST /v1beta/models/{model}:generateContent?key={apiKey}
+        const base = apiUrl.replace(/\/$/, '').replace(/\/models$/, '');
+        url = `${base}/models/${model}:generateContent?key=${apiKey}`;
+        requestBody = JSON.stringify({
+          contents: [{ parts: [{ text: testPrompt }] }]
+        });
+        headers = { 'Content-Type': 'application/json' };
+      } else {
+        // OpenAI-compatible API
+        const base = apiUrl.replace(/\/$/, '');
+        const lastSegment = base.split('/').pop() ?? '';
+        url = /^v\d+$/i.test(lastSegment) ? base + '/chat/completions' : base;
+        requestBody = JSON.stringify({
+          messages: [{ content: testPrompt, role: 'user' }],
+          max_tokens: 20,
+          model
+        });
+        headers = {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        };
+      }
+
+      const response = await fetch(url, {
+        body: requestBody,
+        headers,
+        method: 'POST',
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return { error: `HTTP ${response.status}: ${text.slice(0, 200)}`, success: false };
+      }
+
+      const data: any = await response.json();
+      const message = isGemini
+        ? (data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '(no content)')
+        : (data?.choices?.[0]?.message?.content ?? '(no content)');
+      return { message, success: true };
+    } catch (e: any) {
+      return { error: e?.message ?? String(e), success: false };
+    }
+  }
+
   public async generateText({
     prompt,
     requestTimeout = this.configurationService.get('REQUEST_TIMEOUT')

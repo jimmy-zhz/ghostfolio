@@ -1,3 +1,5 @@
+import { LookupItem } from '@ghostfolio/common/interfaces';
+import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
 import { DataService } from '@ghostfolio/ui/services';
 
 import { CommonModule } from '@angular/common';
@@ -9,8 +11,7 @@ import {
   OnInit
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -18,8 +19,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatTabsModule } from '@angular/material/tabs';
-import { catchError, of } from 'rxjs';
+import { catchError, of, timeout } from 'rxjs';
 
 interface Allocation {
   rebalanceThreshold: number;
@@ -39,12 +39,14 @@ interface DcaSchedule {
   weeklyBudget: number;
 }
 
+export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,
-    MatAutocompleteModule,
+    GfSymbolAutocompleteComponent,
     MatButtonModule,
     MatCardModule,
     MatCheckboxModule,
@@ -52,27 +54,28 @@ interface DcaSchedule {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
-    MatTabsModule
+    ReactiveFormsModule
   ],
   selector: 'gf-investment-plan-page',
+  styleUrls: ['./investment-plan-page.component.scss'],
   templateUrl: './investment-plan-page.component.html'
 })
 export class GfInvestmentPlanPageComponent implements OnInit {
+  public activeTab: InvestmentPlanTab = 'settings';
+  public allocationSymbolControl = new FormControl<LookupItem | null>(null);
   public allocations: Allocation[] = [];
   public dcaSchedules: DcaSchedule[] = [];
+  public dcaSymbolControl = new FormControl<LookupItem | null>(null);
   public emailEnabled = false;
-  public holdingSymbols: string[] = [];
   public isLoading = true;
-  public newAllocation: Allocation = {
+  public newAllocation: Omit<Allocation, 'symbol'> = {
     rebalanceThreshold: 5,
-    symbol: '',
     targetWeight: 0
   };
-  public newDca: DcaSchedule = {
+  public newDca: Omit<DcaSchedule, 'symbol'> = {
     deadlineDay: 5,
     signalType: 'MA5',
     startDate: new Date().toISOString().split('T')[0],
-    symbol: '',
     type: 'ADD_POSITION',
     weeklyBudget: 200
   };
@@ -85,8 +88,11 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     capitalPool: 0,
     deployedCapital: 0,
     notifyEmail: '',
-    notifyLanguage: 'zh'
+    notifyLanguage: 'en'
   };
+  public aiReport = '';
+  public isCopyingPrompt = false;
+  public isGeneratingReport = false;
   public rebalancingResult: {
     actions: any[];
     hasTriggered: boolean;
@@ -102,17 +108,14 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   ) {}
 
   public ngOnInit() {
-    this.loadHoldingSymbols();
     this.loadPlan();
     this.loadSignals();
     this.loadRebalancing();
   }
 
-  public filterSymbols(input: string): string[] {
-    const q = (input ?? '').toUpperCase();
-    return q
-      ? this.holdingSymbols.filter((s) => s.toUpperCase().includes(q))
-      : this.holdingSymbols;
+  public setTab(tab: InvestmentPlanTab) {
+    this.activeTab = tab;
+    this.changeDetectorRef.markForCheck();
   }
 
   public onSavePlan() {
@@ -123,20 +126,17 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   }
 
   public onAddAllocation() {
-    if (!this.newAllocation.symbol || this.newAllocation.targetWeight <= 0)
-      return;
+    const symbol = this.allocationSymbolControl.value?.symbol;
+    if (!symbol || this.newAllocation.targetWeight <= 0) return;
     this.dataService
-      .putInvestmentPlanAllocation(this.newAllocation.symbol, {
+      .putInvestmentPlanAllocation(symbol, {
         rebalanceThreshold: this.newAllocation.rebalanceThreshold,
         targetWeight: this.newAllocation.targetWeight
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.newAllocation = {
-          rebalanceThreshold: 5,
-          symbol: '',
-          targetWeight: 0
-        };
+        this.allocationSymbolControl.reset();
+        this.newAllocation = { rebalanceThreshold: 5, targetWeight: 0 };
         this.loadPlan();
         this.loadRebalancing();
       });
@@ -153,16 +153,17 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   }
 
   public onAddDca() {
-    if (!this.newDca.symbol || this.newDca.weeklyBudget <= 0) return;
+    const symbol = this.dcaSymbolControl.value?.symbol;
+    if (!symbol || this.newDca.weeklyBudget <= 0) return;
     this.dataService
-      .postInvestmentPlanDca(this.newDca)
+      .postInvestmentPlanDca({ ...this.newDca, symbol })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
+        this.dcaSymbolControl.reset();
         this.newDca = {
           deadlineDay: 5,
           signalType: 'MA5',
           startDate: new Date().toISOString().split('T')[0],
-          symbol: '',
           type: 'ADD_POSITION',
           weeklyBudget: 200
         };
@@ -191,32 +192,61 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       .subscribe(() => this.loadSignals());
   }
 
-  public signalTypeLabel(type: string): string {
-    const map: Record<string, string> = {
-      DCA_BUY: '📈 DCA 买入',
-      DCA_WAIT: '⏳ DCA 等待',
-      REBALANCE_BUY: '🟢 再平衡买入',
-      REBALANCE_SELL: '🔴 再平衡卖出'
-    };
-    return map[type] ?? type;
+  public prefillDcaFromRebalance(action: any) {
+    const total = Math.round(action.amount);
+    const weekly = Math.max(50, Math.round(total / 7 / 50) * 50);
+    this.newDca = { ...this.newDca, totalBudget: total, weeklyBudget: weekly };
+    this.setTab('dca');
   }
 
-  private loadHoldingSymbols() {
+  public onCopyPrompt() {
+    this.isCopyingPrompt = true;
+    this.changeDetectorRef.markForCheck();
+
     this.dataService
-      .fetchPortfolioHoldings()
+      .fetchInvestmentAiPrompt()
       .pipe(
-        catchError(() => of({ holdings: [] })),
+        catchError(() => of({ prompt: '' })),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(({ holdings }) => {
-        this.holdingSymbols = holdings
-          .filter(
-            ({ assetProfile }) => !['CASH'].includes(assetProfile.assetSubClass)
-          )
-          .map(({ assetProfile }) => assetProfile.symbol)
-          .sort();
+      .subscribe(({ prompt }) => {
+        if (prompt) {
+          navigator.clipboard.writeText(prompt).catch(() => {});
+        }
+        this.isCopyingPrompt = false;
         this.changeDetectorRef.markForCheck();
       });
+  }
+
+  public onGenerateReport() {
+    this.isGeneratingReport = true;
+    this.aiReport = '';
+    this.changeDetectorRef.markForCheck();
+
+    this.dataService
+      .generateInvestmentAiReport()
+      .pipe(
+        timeout(60000),
+        catchError(() =>
+          of({ report: 'Failed to generate report. Please check your AI provider configuration in Admin → Model Provider.' })
+        ),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ report }) => {
+        this.aiReport = report;
+        this.isGeneratingReport = false;
+        this.changeDetectorRef.markForCheck();
+      });
+  }
+
+  public signalTypeLabel(type: string): string {
+    const map: Record<string, string> = {
+      DCA_BUY: 'DCA Buy',
+      DCA_WAIT: 'DCA Wait',
+      REBALANCE_BUY: 'Rebalance Buy',
+      REBALANCE_SELL: 'Rebalance Sell'
+    };
+    return map[type] ?? type;
   }
 
   private loadPlan() {

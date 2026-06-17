@@ -1,9 +1,32 @@
 :host {
   display: block;
 
-  .allocations-by-symbol {
+  .by-holding-content {
+    padding: 0 0.1875rem;
+  }
+
+  .by-holding-chart {
+    width: 55%;
+    flex-shrink: 0;
+    padding: 0 0.25rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
     gf-portfolio-proportion-chart {
-      max-width: 80vh;
+      width: 560px;
+      flex-shrink: 0;
+    }
+  }
+
+  .by-holding-list {
+    width: 45%;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0 0.125rem;
+
+    .border-bottom {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     }
   }
 

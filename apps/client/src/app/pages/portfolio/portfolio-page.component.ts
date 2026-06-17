@@ -51,6 +51,12 @@ export class PortfolioPageComponent {
                 internalRoutes.portfolio.subRoutes.activities.routerLink
             },
             {
+              iconName: 'calendar-outline',
+              label: internalRoutes.portfolio.subRoutes.investmentPlan.title,
+              routerLink:
+                internalRoutes.portfolio.subRoutes.investmentPlan.routerLink
+            },
+            {
               iconName: 'pie-chart-outline',
               label: internalRoutes.portfolio.subRoutes.allocations.title,
               routerLink:
@@ -60,12 +66,6 @@ export class PortfolioPageComponent {
               iconName: 'calculator-outline',
               label: internalRoutes.portfolio.subRoutes.fire.title,
               routerLink: internalRoutes.portfolio.subRoutes.fire.routerLink
-            },
-            {
-              iconName: 'calendar-outline',
-              label: internalRoutes.portfolio.subRoutes.investmentPlan.title,
-              routerLink:
-                internalRoutes.portfolio.subRoutes.investmentPlan.routerLink
             },
             {
               iconName: 'scan-outline',

@@ -27,6 +27,7 @@ import {
   DestroyRef,
   OnInit
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -44,6 +45,7 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 
 @Component({
   imports: [
+    DecimalPipe,
     GfPortfolioProportionChartComponent,
     GfPremiumIndicatorComponent,
     GfTopHoldingsComponent,
@@ -602,5 +604,24 @@ export class GfAllocationsPageComponent implements OnInit {
 
   public showValuesInPercentage() {
     return this.hasImpersonationId || this.user?.settings?.isRestrictedView;
+  }
+
+  public get sortedSymbolList(): {
+    symbol: string;
+    name: string;
+    percentage: number;
+  }[] {
+    if (!this.symbols) {
+      return [];
+    }
+    const entries = Object.values(this.symbols);
+    const total = entries.reduce((sum, e) => sum + (e.value ?? 0), 0);
+    return entries
+      .map((e) => ({
+        symbol: e.symbol,
+        name: e.name,
+        percentage: total > 0 ? (e.value / total) * 100 : 0
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
   }
 }
