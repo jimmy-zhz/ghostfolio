@@ -538,10 +538,12 @@ export class PortfolioController {
     @Query('assetClasses') filterByAssetClasses?: string,
     @Query('dataSource') filterByDataSource?: string,
     @Query('range') dateRange: DateRange = DEFAULT_DATE_RANGE,
+    @Query('refresh') refreshParam = 'false',
     @Query('symbol') filterBySymbol?: string,
     @Query('tags') filterByTags?: string,
     @Query('withExcludedAccounts') withExcludedAccountsParam = 'false'
   ): Promise<PortfolioPerformanceResponse> {
+    const refresh = refreshParam === 'true';
     const withExcludedAccounts = withExcludedAccountsParam === 'true';
 
     const filters = this.apiService.buildFiltersFromQueryParams({
@@ -556,6 +558,7 @@ export class PortfolioController {
       dateRange,
       filters,
       impersonationId,
+      refresh,
       withExcludedAccounts,
       userId: this.request.user.id
     });

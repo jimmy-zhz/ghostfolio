@@ -1,7 +1,11 @@
 import { AccountService } from '@ghostfolio/api/app/account/account.service';
 import { CashDetails } from '@ghostfolio/api/app/account/interfaces/cash-details.interface';
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
-import { userDummyData } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
+import {
+  activityDummyData,
+  symbolProfileDummyData,
+  userDummyData
+} from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator-test-utils';
 import { PortfolioCalculatorFactory } from '@ghostfolio/api/app/portfolio/calculator/portfolio-calculator.factory';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
@@ -10,6 +14,7 @@ import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-
 import { ImpersonationService } from '@ghostfolio/api/services/impersonation/impersonation.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
 import { parseDate } from '@ghostfolio/common/helper';
+import { Activity } from '@ghostfolio/common/interfaces';
 
 import { Account, DataSource } from '@prisma/client';
 import { Big } from 'big.js';
@@ -101,6 +106,7 @@ describe('PortfolioService', () => {
       exchangeRateDataService,
       null,
       impersonationService,
+      null,
       null,
       null,
       symbolProfileService,
@@ -269,6 +275,109 @@ describe('PortfolioService', () => {
       expect(holdings['USD']).toBeDefined();
       expect(holdings['USD'].assetProfile.dataSource).toBe(DataSource.YAHOO);
       expect(holdings['USD'].assetProfile.symbol).toBe('USD');
+    });
+  });
+
+  describe('getValueOfAccountsAndPlatforms', () => {
+    it('should reduce investment by the cost basis (not the sale proceeds) when a position is fully sold or transferred out', async () => {
+      const diAccount = {
+        balance: 0,
+        comment: null,
+        createdAt: parseDate('2024-01-01'),
+        currency: 'USD',
+        id: 'di-account-id',
+        isExcluded: false,
+        name: 'DI',
+        platformId: null,
+        updatedAt: parseDate('2024-01-01'),
+        userId: userDummyData.id
+      } as Account;
+
+      const tfsaAccount = {
+        ...diAccount,
+        id: 'tfsa-account-id',
+        name: 'TFSA'
+      } as Account;
+
+      jest
+        .spyOn(accountService, 'getAccounts')
+        .mockResolvedValue([diAccount, tfsaAccount]);
+
+      const symbolProfile = {
+        ...symbolProfileDummyData,
+        currency: 'USD',
+        dataSource: DataSource.YAHOO,
+        name: 'AAA Inc.',
+        symbol: 'AAA'
+      };
+
+      // Bought for real cash in DI, then fully sold at a gain and
+      // transferred (re-bought) into TFSA
+      const activities = [
+        {
+          ...activityDummyData,
+          account: diAccount,
+          accountId: diAccount.id,
+          currency: 'USD',
+          date: parseDate('2024-01-01'),
+          quantity: 10,
+          SymbolProfile: symbolProfile,
+          type: 'BUY',
+          unitPrice: 50
+        },
+        {
+          ...activityDummyData,
+          account: diAccount,
+          accountId: diAccount.id,
+          currency: 'USD',
+          date: parseDate('2024-06-01'),
+          quantity: 10,
+          SymbolProfile: symbolProfile,
+          type: 'SELL',
+          unitPrice: 90
+        },
+        {
+          ...activityDummyData,
+          account: tfsaAccount,
+          accountId: tfsaAccount.id,
+          currency: 'USD',
+          date: parseDate('2024-06-01'),
+          quantity: 10,
+          SymbolProfile: symbolProfile,
+          type: 'BUY',
+          unitPrice: 90
+        }
+      ] as unknown as Activity[];
+
+      const { accounts } = await (
+        portfolioService as unknown as {
+          getValueOfAccountsAndPlatforms: (params: {
+            activities: Activity[];
+            filters?: { id: string; type: string }[];
+            portfolioItemsNow: Record<string, never>;
+            userCurrency: string;
+            userId: string;
+          }) => Promise<{
+            accounts: Record<string, { investmentInBaseCurrency: number }>;
+            platforms: object;
+          }>;
+        }
+      ).getValueOfAccountsAndPlatforms({
+        activities,
+        filters: [],
+        portfolioItemsNow: {},
+        userCurrency: 'USD',
+        userId: userDummyData.id
+      });
+
+      expect(accounts[diAccount.id].investmentInBaseCurrency).toBeCloseTo(
+        0,
+        5
+      );
+      expect(accounts[tfsaAccount.id].investmentInBaseCurrency).toBeCloseTo(
+        900,
+        5
+      );
     });
   });
 });

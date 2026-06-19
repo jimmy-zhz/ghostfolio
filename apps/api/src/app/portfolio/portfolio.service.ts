@@ -2,6 +2,7 @@ import { AccountBalanceService } from '@ghostfolio/api/app/account-balance/accou
 import { AccountService } from '@ghostfolio/api/app/account/account.service';
 import { CashDetails } from '@ghostfolio/api/app/account/interfaces/cash-details.interface';
 import { ActivitiesService } from '@ghostfolio/api/app/activities/activities.service';
+import { RedisCacheService } from '@ghostfolio/api/app/redis-cache/redis-cache.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
 import { getFactor } from '@ghostfolio/api/helper/portfolio.helper';
 import { AccountClusterRiskCurrentInvestment } from '@ghostfolio/api/models/rules/account-cluster-risk/current-investment';
@@ -120,6 +121,7 @@ export class PortfolioService {
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly i18nService: I18nService,
     private readonly impersonationService: ImpersonationService,
+    private readonly redisCacheService: RedisCacheService,
     @Inject(REQUEST) private readonly request: RequestWithUser,
     private readonly rulesService: RulesService,
     private readonly symbolProfileService: SymbolProfileService,
@@ -1012,17 +1014,27 @@ export class PortfolioService {
     dateRange = DEFAULT_DATE_RANGE,
     filters,
     impersonationId,
+    refresh = false,
     userId
   }: {
     dateRange?: DateRange;
     filters?: Filter[];
     impersonationId: string;
+    refresh?: boolean;
     userId: string;
     withExcludedAccounts?: boolean;
   }): Promise<PortfolioPerformanceResponse> {
     userId = await this.getUserId(impersonationId, userId);
     const user = await this.userService.user({ id: userId });
     const userCurrency = this.getUserCurrency(user);
+
+    if (refresh) {
+      // Invalidate the cached snapshot so today's quote and performance
+      // are recomputed instead of serving a stale snapshot in the background
+      await this.redisCacheService.removePortfolioSnapshotsByUserId({
+        userId
+      });
+    }
 
     const [accountBalanceItems, { activities }] = await Promise.all([
       this.accountBalanceService.getAccountBalanceItems({
@@ -2214,6 +2226,10 @@ export class PortfolioService {
         };
       }
 
+      const investmentStateBySymbol: {
+        [symbol: string]: { investment: Big; quantity: Big };
+      } = {};
+
       for (const {
         account,
         currency,
@@ -2229,16 +2245,60 @@ export class PortfolioService {
           (portfolioItemsNow[SymbolProfile.symbol]?.marketPriceInBaseCurrency ??
             0);
 
+        const previousState = investmentStateBySymbol[SymbolProfile.symbol] ?? {
+          investment: new Big(0),
+          quantity: new Big(0)
+        };
+
+        let investment = previousState.investment;
+
+        if (type === 'BUY') {
+          investment = previousState.investment.plus(
+            new Big(quantity).mul(unitPrice)
+          );
+        } else if (type === 'SELL') {
+          if (previousState.investment.gt(0) && previousState.quantity.gt(0)) {
+            // Reduce by the average cost basis of the shares sold, not by the
+            // sale proceeds, so a profitable sell does not erase principal
+            // that is still held in (or was moved to) another account
+            const averagePrice = previousState.investment.div(
+              previousState.quantity
+            );
+
+            investment = previousState.investment.minus(
+              new Big(quantity).mul(averagePrice)
+            );
+          } else {
+            investment = previousState.investment.minus(
+              new Big(quantity).mul(unitPrice)
+            );
+          }
+        }
+
+        let newQuantity = previousState.quantity.plus(
+          new Big(quantity).mul(getFactor(type))
+        );
+
+        if (newQuantity.abs().lt(Number.EPSILON)) {
+          // Reset to zero if quantity is (almost) zero to avoid rounding issues
+          investment = new Big(0);
+          newQuantity = new Big(0);
+        }
+
+        investmentStateBySymbol[SymbolProfile.symbol] = {
+          investment,
+          quantity: newQuantity
+        };
+
         const investmentOfSymbolInBaseCurrency =
-          getFactor(type) *
-          (await this.exchangeRateDataService.toCurrencyAtDate(
-            new Big(quantity).mul(unitPrice).toNumber(),
+          await this.exchangeRateDataService.toCurrencyAtDate(
+            investment.minus(previousState.investment).toNumber(),
             currency ?? SymbolProfile.currency,
             userCurrency,
             date
-          ));
+          );
 
-        if (accounts[account?.id || UNKNOWN_KEY]?.valueInBaseCurrency) {
+        if (accounts[account?.id || UNKNOWN_KEY]) {
           accounts[account?.id || UNKNOWN_KEY].valueInBaseCurrency +=
             currentValueOfSymbolInBaseCurrency;
           accounts[account?.id || UNKNOWN_KEY].investmentInBaseCurrency +=
@@ -2253,9 +2313,7 @@ export class PortfolioService {
           };
         }
 
-        if (
-          platforms[account?.platformId || UNKNOWN_KEY]?.valueInBaseCurrency
-        ) {
+        if (platforms[account?.platformId || UNKNOWN_KEY]) {
           platforms[account?.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
             currentValueOfSymbolInBaseCurrency;
         } else {

@@ -140,7 +140,8 @@ export class GfHomeOverviewComponent implements OnInit {
 
     this.dataService
       .fetchPortfolioPerformance({
-        range: this.user()?.settings?.dateRange ?? DEFAULT_DATE_RANGE
+        range: this.user()?.settings?.dateRange ?? DEFAULT_DATE_RANGE,
+        refresh: true
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ chart, errors, performance }) => {
