@@ -49,6 +49,7 @@ export class GfAccountsPageComponent implements OnInit {
   public hasPermissionToUpdateAccount: boolean;
   public routeQueryParams: Subscription;
   public totalBalanceInBaseCurrency = 0;
+  public totalInvestmentInBaseCurrency = 0;
   public totalValueInBaseCurrency = 0;
   public user: User;
 
@@ -131,11 +132,13 @@ export class GfAccountsPageComponent implements OnInit {
           accounts,
           activitiesCount,
           totalBalanceInBaseCurrency,
+          totalInvestmentInBaseCurrency,
           totalValueInBaseCurrency
         }) => {
           this.accounts = accounts;
           this.activitiesCount = activitiesCount;
           this.totalBalanceInBaseCurrency = totalBalanceInBaseCurrency;
+          this.totalInvestmentInBaseCurrency = totalInvestmentInBaseCurrency;
           this.totalValueInBaseCurrency = totalValueInBaseCurrency;
 
           if (this.accounts?.length <= 0) {
@@ -356,6 +359,7 @@ export class GfAccountsPageComponent implements OnInit {
     this.accounts = undefined;
     this.activitiesCount = 0;
     this.totalBalanceInBaseCurrency = 0;
+    this.totalInvestmentInBaseCurrency = 0;
     this.totalValueInBaseCurrency = 0;
   }
 }

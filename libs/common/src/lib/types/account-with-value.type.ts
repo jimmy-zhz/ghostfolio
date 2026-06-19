@@ -6,6 +6,8 @@ export type AccountWithValue = AccountModel & {
   balanceInBaseCurrency: number;
   dividendInBaseCurrency: number;
   interestInBaseCurrency: number;
+  investment: number;
+  investmentInBaseCurrency: number;
   platform?: Platform;
   value: number;
   valueInBaseCurrency: number;

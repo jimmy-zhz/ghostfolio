@@ -64,6 +64,7 @@ export class GfAccountsTableComponent {
   public readonly showValue = input(true);
   public readonly showValueInBaseCurrency = input(true);
   public readonly totalBalanceInBaseCurrency = input<number>();
+  public readonly totalInvestmentInBaseCurrency = input<number>();
   public readonly totalValueInBaseCurrency = input<number>();
 
   public readonly accountDeleted = output<string>();
@@ -87,6 +88,7 @@ export class GfAccountsTableComponent {
 
     if (this.showValue()) {
       columns.push('value');
+      columns.push('investment');
     }
 
     columns.push('currency');

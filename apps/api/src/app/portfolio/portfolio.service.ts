@@ -227,6 +227,8 @@ export class PortfolioService {
           }
         }
 
+        const investmentInBaseCurrency =
+          details.accounts[account.id]?.investmentInBaseCurrency ?? 0;
         const valueInBaseCurrency =
           details.accounts[account.id]?.valueInBaseCurrency ?? 0;
 
@@ -235,12 +237,18 @@ export class PortfolioService {
           activitiesCount,
           dividendInBaseCurrency,
           interestInBaseCurrency,
+          investmentInBaseCurrency,
           valueInBaseCurrency,
           allocationInPercentage: 0,
           balanceInBaseCurrency: this.exchangeRateDataService.toCurrency(
             account.balance,
             account.currency,
             userCurrency
+          ),
+          investment: this.exchangeRateDataService.toCurrency(
+            investmentInBaseCurrency,
+            userCurrency,
+            account.currency
           ),
           value: this.exchangeRateDataService.toCurrency(
             valueInBaseCurrency,
@@ -291,6 +299,7 @@ export class PortfolioService {
     let totalBalanceInBaseCurrency = new Big(0);
     let totalDividendInBaseCurrency = new Big(0);
     let totalInterestInBaseCurrency = new Big(0);
+    let totalInvestmentInBaseCurrency = new Big(0);
     let totalValueInBaseCurrency = new Big(0);
 
     for (const account of accounts) {
@@ -304,6 +313,9 @@ export class PortfolioService {
       );
       totalInterestInBaseCurrency = totalInterestInBaseCurrency.plus(
         account.interestInBaseCurrency
+      );
+      totalInvestmentInBaseCurrency = totalInvestmentInBaseCurrency.plus(
+        account.investmentInBaseCurrency
       );
       totalValueInBaseCurrency = totalValueInBaseCurrency.plus(
         account.valueInBaseCurrency
@@ -325,6 +337,7 @@ export class PortfolioService {
       totalBalanceInBaseCurrency: totalBalanceInBaseCurrency.toNumber(),
       totalDividendInBaseCurrency: totalDividendInBaseCurrency.toNumber(),
       totalInterestInBaseCurrency: totalInterestInBaseCurrency.toNumber(),
+      totalInvestmentInBaseCurrency: totalInvestmentInBaseCurrency.toNumber(),
       totalValueInBaseCurrency: totalValueInBaseCurrency.toNumber()
     };
   }
@@ -723,6 +736,7 @@ export class PortfolioService {
       accounts[UNKNOWN_KEY] = {
         balance: 0,
         currency: userCurrency,
+        investmentInBaseCurrency: emergencyFundInCash,
         name: UNKNOWN_KEY,
         valueInBaseCurrency: emergencyFundInCash
       };
@@ -2171,6 +2185,7 @@ export class PortfolioService {
       accounts[account.id] = {
         balance: account.balance,
         currency: account.currency,
+        investmentInBaseCurrency: 0,
         name: account.name,
         valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
           account.balance,
@@ -2201,9 +2216,12 @@ export class PortfolioService {
 
       for (const {
         account,
+        currency,
+        date,
         quantity,
         SymbolProfile,
-        type
+        type,
+        unitPrice
       } of ordersByAccount) {
         const currentValueOfSymbolInBaseCurrency =
           getFactor(type) *
@@ -2211,13 +2229,25 @@ export class PortfolioService {
           (portfolioItemsNow[SymbolProfile.symbol]?.marketPriceInBaseCurrency ??
             0);
 
+        const investmentOfSymbolInBaseCurrency =
+          getFactor(type) *
+          (await this.exchangeRateDataService.toCurrencyAtDate(
+            new Big(quantity).mul(unitPrice).toNumber(),
+            currency ?? SymbolProfile.currency,
+            userCurrency,
+            date
+          ));
+
         if (accounts[account?.id || UNKNOWN_KEY]?.valueInBaseCurrency) {
           accounts[account?.id || UNKNOWN_KEY].valueInBaseCurrency +=
             currentValueOfSymbolInBaseCurrency;
+          accounts[account?.id || UNKNOWN_KEY].investmentInBaseCurrency +=
+            investmentOfSymbolInBaseCurrency;
         } else {
           accounts[account?.id || UNKNOWN_KEY] = {
             balance: 0,
             currency: account?.currency,
+            investmentInBaseCurrency: investmentOfSymbolInBaseCurrency,
             name: account?.name,
             valueInBaseCurrency: currentValueOfSymbolInBaseCurrency
           };

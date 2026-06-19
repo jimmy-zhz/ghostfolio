@@ -6,5 +6,6 @@ export interface AccountsResponse {
   totalBalanceInBaseCurrency: number;
   totalDividendInBaseCurrency: number;
   totalInterestInBaseCurrency: number;
+  totalInvestmentInBaseCurrency: number;
   totalValueInBaseCurrency: number;
 }
