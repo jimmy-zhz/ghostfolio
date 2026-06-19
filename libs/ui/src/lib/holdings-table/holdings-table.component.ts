@@ -67,6 +67,7 @@ export class GfHoldingsTableComponent {
 
     if (this.hasPermissionToShowValues()) {
       columns.push('valueInBaseCurrency');
+      columns.push('investment');
     }
 
     columns.push('allocationInPercentage');
