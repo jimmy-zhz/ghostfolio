@@ -18,8 +18,10 @@ import {
   PROPERTY_IS_DATA_GATHERING_ENABLED
 } from '@ghostfolio/common/config';
 import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
+import type { RequestWithUser } from '@ghostfolio/common/types';
 
 import { Injectable } from '@nestjs/common';
+import { ContextIdFactory, ModuleRef } from '@nestjs/core';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
@@ -34,7 +36,7 @@ export class CronService {
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly investmentPlanService: InvestmentPlanService,
     private readonly mailService: MailService,
-    private readonly portfolioService: PortfolioService,
+    private readonly moduleRef: ModuleRef,
     private readonly priceAlertService: PriceAlertService,
     private readonly propertyService: PropertyService,
     private readonly rebalancingService: RebalancingService,
@@ -42,6 +44,25 @@ export class CronService {
     private readonly twitterBotService: TwitterBotService,
     private readonly userService: UserService
   ) {}
+
+  /**
+   * PortfolioService is request-scoped (it injects REQUEST). Injecting it
+   * directly into CronService's constructor would make CronService itself
+   * request-scoped, which silently breaks ALL @Cron registrations on this
+   * class (Nest logs "Cannot register cron job ... non static provider").
+   * Resolve a fresh instance per cron run instead, backed by a real user
+   * fetched from the DB (same shape the JwtStrategy would attach to a
+   * request), so getDetails()'s internal `this.request.user...` lookups work.
+   */
+  private async getPortfolioServiceForUser(userId: string): Promise<PortfolioService> {
+    const user = await this.userService.user({ id: userId });
+    const contextId = ContextIdFactory.create();
+    this.moduleRef.registerRequestByContextId(
+      { user } as RequestWithUser,
+      contextId
+    );
+    return this.moduleRef.resolve(PortfolioService, contextId, { strict: false });
+  }
 
   @Cron(CronExpression.EVERY_HOUR)
   public async runEveryHour() {
@@ -116,7 +137,8 @@ export class CronService {
       // 2. Generate Rebalancing signals (at most once per week, deduped in service)
       if (plan.allocations?.length > 0) {
         try {
-          const { holdings } = await this.portfolioService.getDetails({
+          const portfolioService = await this.getPortfolioServiceForUser(plan.userId);
+          const { holdings } = await portfolioService.getDetails({
             filters: [],
             impersonationId: undefined,
             userId: plan.userId,
@@ -144,7 +166,8 @@ export class CronService {
           // Gather holdings summary for AI prompt context
           let portfolioSummary: { symbol: string; currentWeight: number; value: number }[] = [];
           try {
-            const { holdings } = await this.portfolioService.getDetails({
+            const portfolioService = await this.getPortfolioServiceForUser(plan.userId);
+            const { holdings } = await portfolioService.getDetails({
               filters: [],
               impersonationId: undefined,
               userId: plan.userId,

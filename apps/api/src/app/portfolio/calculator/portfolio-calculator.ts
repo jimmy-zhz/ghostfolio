@@ -153,7 +153,24 @@ export abstract class PortfolioCalculator {
         }
       )
       .sort((a, b) => {
-        return a.date?.localeCompare(b.date);
+        const dateComparison = a.date?.localeCompare(b.date);
+
+        if (dateComparison !== 0) {
+          return dateComparison;
+        }
+
+        // Process SELL before BUY on the same day to avoid temporarily
+        // inflating the position (e.g. when transferring a holding
+        // between accounts via a same-day SELL + BUY pair)
+        if (a.type === 'SELL' && b.type === 'BUY') {
+          return -1;
+        }
+
+        if (a.type === 'BUY' && b.type === 'SELL') {
+          return 1;
+        }
+
+        return 0;
       });
 
     this.portfolioSnapshotService = portfolioSnapshotService;
