@@ -1,5 +1,6 @@
 import { DcaSignalService } from '@ghostfolio/api/app/investment-plan/dca-signal.service';
 import { InvestmentPlanService } from '@ghostfolio/api/app/investment-plan/investment-plan.service';
+import { PriceAlertService } from '@ghostfolio/api/app/investment-plan/price-alert.service';
 import { RebalancingService } from '@ghostfolio/api/app/investment-plan/rebalancing.service';
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import { UserService } from '@ghostfolio/api/app/user/user.service';
@@ -34,6 +35,7 @@ export class CronService {
     private readonly investmentPlanService: InvestmentPlanService,
     private readonly mailService: MailService,
     private readonly portfolioService: PortfolioService,
+    private readonly priceAlertService: PriceAlertService,
     private readonly propertyService: PropertyService,
     private readonly rebalancingService: RebalancingService,
     private readonly statisticsGatheringService: StatisticsGatheringService,
@@ -106,8 +108,10 @@ export class CronService {
     const plans = await this.investmentPlanService.getAllActivePlans();
 
     for (const plan of plans) {
-      // 1. Generate DCA signals
-      await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
+      // 1. Generate DCA signals — only while the master email switch is on
+      if (plan.emailEnabled && plan.notifyEmail) {
+        await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
+      }
 
       // 2. Generate Rebalancing signals (at most once per week, deduped in service)
       if (plan.allocations?.length > 0) {
@@ -171,6 +175,43 @@ export class CronService {
         }
       }
     }
+  }
+
+  @Cron('*/10 * * * *')
+  public async runPriceAlertsCheck() {
+    if (!this.isWithinExtendedCanadianTradingHours()) {
+      return;
+    }
+
+    const plans = await this.investmentPlanService.getAllActivePlans();
+    await this.priceAlertService.checkAndTriggerAlertsForPlans(plans);
+  }
+
+  /**
+   * TSX/NYSE regular session is 9:30–16:00 America/Toronto. Widened by ±1h
+   * here to absorb DST/timezone edge cases without adding a real calendar.
+   */
+  private isWithinExtendedCanadianTradingHours(): boolean {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      hour12: false,
+      minute: 'numeric',
+      timeZone: 'America/Toronto',
+      weekday: 'short'
+    }).formatToParts(new Date());
+
+    const weekday = parts.find((p) => p.type === 'weekday')?.value;
+    const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+    const minute = Number(parts.find((p) => p.type === 'minute')?.value);
+
+    const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(weekday);
+    const minutesSinceMidnight = hour * 60 + minute;
+
+    return (
+      isWeekday &&
+      minutesSinceMidnight >= 8 * 60 + 30 &&
+      minutesSinceMidnight <= 17 * 60
+    );
   }
 
   private async isDataGatheringEnabled() {

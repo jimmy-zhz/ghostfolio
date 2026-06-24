@@ -899,6 +899,18 @@ export class DataService {
     return this.http.get<any>('/api/v1/investment-plan/rebalancing');
   }
 
+  public postInvestmentPlanPriceAlert(data: any) {
+    return this.http.post<any>('/api/v1/investment-plan/price-alert', data);
+  }
+
+  public rearmInvestmentPlanPriceAlert(id: string) {
+    return this.http.put<any>(`/api/v1/investment-plan/price-alert/${id}/rearm`, {});
+  }
+
+  public deleteInvestmentPlanPriceAlert(id: string) {
+    return this.http.delete<any>(`/api/v1/investment-plan/price-alert/${id}`);
+  }
+
   public fetchAiConfig() {
     return this.http.get<{
       apiKey: string;

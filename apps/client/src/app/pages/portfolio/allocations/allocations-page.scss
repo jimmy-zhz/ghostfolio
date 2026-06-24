@@ -30,6 +30,25 @@
     }
   }
 
+  @media (max-width: 767.98px) {
+    .by-holding-content {
+      flex-direction: column;
+    }
+
+    .by-holding-chart {
+      width: 100%;
+
+      gf-portfolio-proportion-chart {
+        width: 100%;
+        max-width: 280px;
+      }
+    }
+
+    .by-holding-list {
+      width: 80%;
+    }
+  }
+
   .world-map-chart {
     .mat-mdc-card {
       .world-map-chart-container {

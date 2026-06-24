@@ -4,6 +4,7 @@ import { PropertyService } from '@ghostfolio/api/services/property/property.serv
 import { PROPERTY_AI_RESPONSE_LANGUAGE } from '@ghostfolio/common/config';
 import type { RequestWithUser } from '@ghostfolio/common/types';
 
+import { PriceAlertService } from './price-alert.service';
 import { RebalancingService } from './rebalancing.service';
 
 import {
@@ -19,7 +20,7 @@ import {
 } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { DcaSignalType, DcaType } from '@prisma/client';
+import { AlertCondition, DataSource, DcaSignalType, DcaType } from '@prisma/client';
 
 import { InvestmentPlanService } from './investment-plan.service';
 
@@ -29,6 +30,7 @@ export class InvestmentPlanController {
     private readonly investmentPlanService: InvestmentPlanService,
     private readonly mailService: MailService,
     private readonly portfolioService: PortfolioService,
+    private readonly priceAlertService: PriceAlertService,
     private readonly propertyService: PropertyService,
     private readonly rebalancingService: RebalancingService,
     @Inject(REQUEST) private readonly request: RequestWithUser
@@ -70,6 +72,7 @@ export class InvestmentPlanController {
         notifyEmail: null,
         notifyLanguage: 'en',
         preservationBucket: 0,
+        priceAlerts: [],
         sipMonthlyBudget: 0
       };
     }
@@ -172,6 +175,52 @@ export class InvestmentPlanController {
   @UseGuards(AuthGuard('jwt'))
   public async deleteDcaSchedule(@Param('id') id: string) {
     await this.investmentPlanService.deleteDcaSchedule(id);
+    return { success: true };
+  }
+
+  @Post('price-alert')
+  @UseGuards(AuthGuard('jwt'))
+  public async createPriceAlert(
+    @Body()
+    body: {
+      condition: AlertCondition;
+      dataSource: DataSource;
+      messageTemplate: string;
+      name?: string;
+      symbol: string;
+      targetValue: number;
+    }
+  ) {
+    const plan = await this.getOrCreatePlan();
+    return this.priceAlertService.createAlert(plan.id, {
+      condition: body.condition,
+      dataSource: body.dataSource,
+      messageTemplate: body.messageTemplate ?? '',
+      name: body.name,
+      symbol: body.symbol,
+      targetValue: body.targetValue
+    });
+  }
+
+  @Put('price-alert/:id/rearm')
+  @UseGuards(AuthGuard('jwt'))
+  public async rearmPriceAlert(@Param('id') id: string) {
+    return this.priceAlertService.rearmAlert(id);
+  }
+
+  @Put('price-alert/:id')
+  @UseGuards(AuthGuard('jwt'))
+  public async updatePriceAlert(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>
+  ) {
+    return this.priceAlertService.updateAlert(id, body);
+  }
+
+  @Delete('price-alert/:id')
+  @UseGuards(AuthGuard('jwt'))
+  public async deletePriceAlert(@Param('id') id: string) {
+    await this.priceAlertService.deleteAlert(id);
     return { success: true };
   }
 

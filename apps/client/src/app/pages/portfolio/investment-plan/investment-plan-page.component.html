@@ -164,7 +164,7 @@
     <!-- ── Rebalancing ── -->
     @if (activeTab === 'rebalancing') {
       <div class="row mt-4">
-        <div class="col" style="flex: 0 0 70%; max-width: 70%">
+        <div class="col-md-8">
           @if (rebalancingResult) {
             <mat-card appearance="outlined" class="mb-3">
               <mat-card-header>
@@ -253,7 +253,7 @@
           </mat-card>
         </div>
 
-        <div class="col" style="flex: 0 0 30%; max-width: 30%">
+        <div class="col-md-4">
           <mat-card appearance="outlined">
             <mat-card-header>
               <mat-card-title i18n>Add Target Allocation</mat-card-title>
@@ -482,6 +482,143 @@
                       {{ signal.status === 'EXECUTED' ? 'Executed' : 'Dismissed' }}
                     </span>
                   }
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="col-md-6">
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title i18n>Add Price Alert</mat-card-title>
+              <mat-card-subtitle i18n
+                >Get an email when a symbol's live price crosses a threshold</mat-card-subtitle
+              >
+            </mat-card-header>
+            <mat-card-content class="py-3">
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Name, symbol or ISIN</mat-label>
+                <gf-symbol-autocomplete [formControl]="priceAlertSymbolControl" />
+              </mat-form-field>
+              <div class="d-flex gap-2">
+                <mat-form-field appearance="outline" style="width: 140px">
+                  <mat-label i18n>Rule</mat-label>
+                  <mat-select [(ngModel)]="newPriceAlert.condition">
+                    <mat-option value="GREATER_THAN_OR_EQUAL">≥</mat-option>
+                    <mat-option value="GREATER_THAN">&gt;</mat-option>
+                    <mat-option value="LESS_THAN_OR_EQUAL">≤</mat-option>
+                    <mat-option value="LESS_THAN">&lt;</mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="flex-grow-1">
+                  <mat-label i18n>Value</mat-label>
+                  <input
+                    matInput
+                    min="0"
+                    step="0.01"
+                    type="number"
+                    [(ngModel)]="newPriceAlert.targetValue"
+                  />
+                </mat-form-field>
+              </div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Email message</mat-label>
+                <textarea
+                  #priceAlertMessageInput
+                  matInput
+                  maxlength="200"
+                  rows="2"
+                  [(ngModel)]="newPriceAlert.messageTemplate"
+                ></textarea>
+                <mat-hint
+                  class="hint-truncate"
+                  i18n-matTooltip
+                  matTooltip="Short message included in the alert email. Use the buttons below to insert variables."
+                  matTooltipShowDelay="0"
+                  i18n
+                >Short message included in the alert email...</mat-hint>
+              </mat-form-field>
+              <div class="d-flex gap-2 mb-3">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="insertPriceAlertVariable(priceAlertMessageInput, 'symbol')"
+                  i18n
+                >
+                  + Symbol
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="insertPriceAlertVariable(priceAlertMessageInput, 'targetValue')"
+                  i18n
+                >
+                  + Target value
+                </button>
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="insertPriceAlertVariable(priceAlertMessageInput, 'currentValue')"
+                  i18n
+                >
+                  + Current value
+                </button>
+              </div>
+              <button color="primary" mat-flat-button (click)="onAddPriceAlert()" i18n>
+                Add alert
+              </button>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <div class="col-md-6">
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title i18n>Configured price alerts</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="py-3">
+              @if (priceAlerts.length === 0) {
+                <p class="text-muted" i18n>No price alerts configured yet.</p>
+              }
+              @for (alert of priceAlerts; track alert.id) {
+                <div class="border rounded p-3 mb-2">
+                  <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                      <strong>{{ alert.name || alert.symbol }}</strong>
+                      <span class="ms-2 text-muted"
+                        >{{ conditionLabel(alert.condition) }} {{ alert.targetValue }}</span
+                      >
+                    </div>
+                    <button color="warn" mat-icon-button (click)="onDeletePriceAlert(alert.id)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                  @if (alert.messageTemplate) {
+                    <div class="text-muted small mt-1">{{ alert.messageTemplate }}</div>
+                  }
+                  <div class="mt-2">
+                    @if (alert.isActive) {
+                      <span class="badge bg-success" i18n>Active</span>
+                    } @else {
+                      <span class="badge bg-secondary me-2" i18n>Triggered</span>
+                      @if (alert.triggeredAt) {
+                        <span class="text-muted small"
+                          >{{ alert.triggeredValue }} @ {{ alert.triggeredAt | date: 'yyyy-MM-dd HH:mm' }}</span
+                        >
+                      }
+                      <button
+                        class="ms-2"
+                        mat-stroked-button
+                        (click)="onRearmPriceAlert(alert.id)"
+                        i18n
+                      >
+                        Re-arm
+                      </button>
+                    }
+                  </div>
                 </div>
               }
             </mat-card-content>

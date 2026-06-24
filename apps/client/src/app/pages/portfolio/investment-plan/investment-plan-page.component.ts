@@ -41,6 +41,19 @@ interface DcaSchedule {
   weeklyBudget: number;
 }
 
+interface PriceAlert {
+  condition: string;
+  dataSource: string;
+  id?: string;
+  isActive?: boolean;
+  messageTemplate: string;
+  name?: string;
+  symbol: string;
+  targetValue: number;
+  triggeredAt?: string | null;
+  triggeredValue?: number | null;
+}
+
 export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
 
 @Component({
@@ -82,6 +95,13 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     startDate: new Date().toISOString().split('T')[0],
     type: 'ADD_POSITION',
     weeklyBudget: 200
+  };
+  public priceAlertSymbolControl = new FormControl<LookupItem | null>(null);
+  public priceAlerts: PriceAlert[] = [];
+  public newPriceAlert: Omit<PriceAlert, 'dataSource' | 'name' | 'symbol'> = {
+    condition: 'LESS_THAN_OR_EQUAL',
+    messageTemplate: '',
+    targetValue: 0
   };
   public plan: {
     capitalPool: number;
@@ -209,6 +229,74 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       .subscribe(() => this.loadPlan());
   }
 
+  public onAddPriceAlert() {
+    const item = this.priceAlertSymbolControl.value;
+    if (!item?.symbol || !item?.dataSource || this.newPriceAlert.targetValue <= 0) {
+      return;
+    }
+    this.dataService
+      .postInvestmentPlanPriceAlert({
+        ...this.newPriceAlert,
+        dataSource: item.dataSource,
+        name: item.name,
+        symbol: item.symbol
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.priceAlertSymbolControl.reset();
+        this.newPriceAlert = {
+          condition: 'LESS_THAN_OR_EQUAL',
+          messageTemplate: '',
+          targetValue: 0
+        };
+        this.loadPlan();
+      });
+  }
+
+  public onDeletePriceAlert(id: string) {
+    this.dataService
+      .deleteInvestmentPlanPriceAlert(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadPlan());
+  }
+
+  public onRearmPriceAlert(id: string) {
+    this.dataService
+      .rearmInvestmentPlanPriceAlert(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadPlan());
+  }
+
+  public insertPriceAlertVariable(
+    textarea: HTMLTextAreaElement,
+    variable: 'symbol' | 'targetValue' | 'currentValue'
+  ) {
+    const token = `{${variable}}`;
+    const start = textarea.selectionStart ?? this.newPriceAlert.messageTemplate.length;
+    const end = textarea.selectionEnd ?? start;
+    const current = this.newPriceAlert.messageTemplate;
+    this.newPriceAlert = {
+      ...this.newPriceAlert,
+      messageTemplate: current.slice(0, start) + token + current.slice(end)
+    };
+    this.changeDetectorRef.markForCheck();
+    setTimeout(() => {
+      textarea.focus();
+      const cursor = start + token.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  public conditionLabel(condition: string): string {
+    const map: Record<string, string> = {
+      GREATER_THAN: '>',
+      GREATER_THAN_OR_EQUAL: '≥',
+      LESS_THAN: '<',
+      LESS_THAN_OR_EQUAL: '≤'
+    };
+    return map[condition] ?? condition;
+  }
+
   public onDismissSignal(id: string) {
     this.dataService
       .putInvestmentSignalStatus(id, 'DISMISSED')
@@ -304,6 +392,7 @@ export class GfInvestmentPlanPageComponent implements OnInit {
           this.emailEnabled = plan.emailEnabled;
           this.allocations = plan.allocations ?? [];
           this.dcaSchedules = plan.dcaSchedules ?? [];
+          this.priceAlerts = plan.priceAlerts ?? [];
           this.totalAllocationWeight = this.allocations.reduce(
             (s: number, a: Allocation) => s + a.targetWeight,
             0

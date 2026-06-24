@@ -6,6 +6,7 @@ import {
   InvestmentPlan,
   InvestmentPlanAllocation,
   InvestmentSignal,
+  PriceAlert,
   Prisma,
   SignalStatus
 } from '@prisma/client';
@@ -13,6 +14,7 @@ import {
 export type PlanWithRelations = InvestmentPlan & {
   allocations: InvestmentPlanAllocation[];
   dcaSchedules: DcaSchedule[];
+  priceAlerts: PriceAlert[];
 };
 
 @Injectable()
@@ -21,7 +23,7 @@ export class InvestmentPlanService {
 
   public async getPlanByUserId(userId: string): Promise<PlanWithRelations | null> {
     return this.prismaService.investmentPlan.findUnique({
-      include: { allocations: true, dcaSchedules: true },
+      include: { allocations: true, dcaSchedules: true, priceAlerts: true },
       where: { userId }
     });
   }
@@ -142,7 +144,7 @@ export class InvestmentPlanService {
 
   public async getAllActivePlans(): Promise<PlanWithRelations[]> {
     return this.prismaService.investmentPlan.findMany({
-      include: { allocations: true, dcaSchedules: true }
+      include: { allocations: true, dcaSchedules: true, priceAlerts: true }
     });
   }
 }

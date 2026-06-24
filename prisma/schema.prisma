@@ -383,6 +383,7 @@ model InvestmentPlan {
   userId               String                    @unique
   allocations          InvestmentPlanAllocation[]
   dcaSchedules         DcaSchedule[]
+  priceAlerts          PriceAlert[]
   signals              InvestmentSignal[]
 }
 
@@ -420,6 +421,26 @@ model DcaSchedule {
   @@index([isActive])
 }
 
+model PriceAlert {
+  id              String         @id @default(uuid())
+  symbol          String
+  dataSource      DataSource
+  name            String?
+  condition       AlertCondition
+  targetValue     Float
+  messageTemplate String
+  isActive        Boolean        @default(true)
+  triggeredAt     DateTime?
+  triggeredValue  Float?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  plan            InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId          String
+
+  @@index([planId])
+  @@index([isActive])
+}
+
 model InvestmentSignal {
   id           String             @id @default(uuid())
   symbol       String
@@ -448,6 +469,13 @@ enum DcaSignalType {
   MA5
   RSI
   COMBINED
+}
+
+enum AlertCondition {
+  GREATER_THAN
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN
+  LESS_THAN_OR_EQUAL
 }
 
 enum SignalType {
