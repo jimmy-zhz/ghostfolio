@@ -1,5 +1,5 @@
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
-import { MailService } from '@ghostfolio/api/services/mail/mail.service';
+import type { MailService } from '@ghostfolio/api/services/mail/mail.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -13,7 +13,6 @@ export class PriceAlertService {
 
   public constructor(
     private readonly dataProviderService: DataProviderService,
-    private readonly mailService: MailService,
     private readonly prismaService: PrismaService
   ) {}
 
@@ -45,7 +44,8 @@ export class PriceAlertService {
   }
 
   public async checkAndTriggerAlertsForPlans(
-    plans: PlanWithRelations[]
+    plans: PlanWithRelations[],
+    mailService: MailService
   ): Promise<void> {
     const eligiblePlans = plans.filter(
       (plan) =>
@@ -113,7 +113,7 @@ export class PriceAlertService {
         }
 
         try {
-          const sent = await this.mailService.sendPriceAlertEmail(
+          const sent = await mailService.sendPriceAlertEmail(
             plan.notifyEmail,
             alert,
             currentValue

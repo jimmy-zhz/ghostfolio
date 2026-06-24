@@ -35,7 +35,6 @@ export class CronService {
     private readonly dcaSignalService: DcaSignalService,
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly investmentPlanService: InvestmentPlanService,
-    private readonly mailService: MailService,
     private readonly moduleRef: ModuleRef,
     private readonly priceAlertService: PriceAlertService,
     private readonly propertyService: PropertyService,
@@ -46,22 +45,24 @@ export class CronService {
   ) {}
 
   /**
-   * PortfolioService is request-scoped (it injects REQUEST). Injecting it
-   * directly into CronService's constructor would make CronService itself
+   * PortfolioService is request-scoped (it injects REQUEST), and MailService
+   * is transitively request-scoped too (MailService -> AiService ->
+   * PortfolioService). Injecting either directly into CronService's (or
+   * PriceAlertService's) constructor makes the whole dependency tree
    * request-scoped, which silently breaks ALL @Cron registrations on this
    * class (Nest logs "Cannot register cron job ... non static provider").
    * Resolve a fresh instance per cron run instead, backed by a real user
    * fetched from the DB (same shape the JwtStrategy would attach to a
-   * request), so getDetails()'s internal `this.request.user...` lookups work.
+   * request), so any internal `this.request.user...` lookups work.
    */
-  private async getPortfolioServiceForUser(userId: string): Promise<PortfolioService> {
+  private async resolveRequestScoped<T>(type: new (...args: any[]) => T, userId: string): Promise<T> {
     const user = await this.userService.user({ id: userId });
     const contextId = ContextIdFactory.create();
     this.moduleRef.registerRequestByContextId(
       { user } as RequestWithUser,
       contextId
     );
-    return this.moduleRef.resolve(PortfolioService, contextId, { strict: false });
+    return this.moduleRef.resolve(type, contextId, { strict: false });
   }
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -137,7 +138,7 @@ export class CronService {
       // 2. Generate Rebalancing signals (at most once per week, deduped in service)
       if (plan.allocations?.length > 0) {
         try {
-          const portfolioService = await this.getPortfolioServiceForUser(plan.userId);
+          const portfolioService = await this.resolveRequestScoped(PortfolioService, plan.userId);
           const { holdings } = await portfolioService.getDetails({
             filters: [],
             impersonationId: undefined,
@@ -166,7 +167,7 @@ export class CronService {
           // Gather holdings summary for AI prompt context
           let portfolioSummary: { symbol: string; currentWeight: number; value: number }[] = [];
           try {
-            const portfolioService = await this.getPortfolioServiceForUser(plan.userId);
+            const portfolioService = await this.resolveRequestScoped(PortfolioService, plan.userId);
             const { holdings } = await portfolioService.getDetails({
               filters: [],
               impersonationId: undefined,
@@ -184,7 +185,8 @@ export class CronService {
             }));
           } catch {}
 
-          const sent = await this.mailService.sendInvestmentSignalEmail(
+          const mailService = await this.resolveRequestScoped(MailService, plan.userId);
+          const sent = await mailService.sendInvestmentSignalEmail(
             plan.notifyEmail,
             actionableSignals,
             portfolioSummary
@@ -207,7 +209,13 @@ export class CronService {
     }
 
     const plans = await this.investmentPlanService.getAllActivePlans();
-    await this.priceAlertService.checkAndTriggerAlertsForPlans(plans);
+
+    if (plans.length === 0) {
+      return;
+    }
+
+    const mailService = await this.resolveRequestScoped(MailService, plans[0].userId);
+    await this.priceAlertService.checkAndTriggerAlertsForPlans(plans, mailService);
   }
 
   /**
