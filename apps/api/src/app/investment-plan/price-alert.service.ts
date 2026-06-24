@@ -58,6 +58,14 @@ export class PriceAlertService {
       return;
     }
 
+    const totalActiveAlerts = eligiblePlans.reduce(
+      (sum, plan) => sum + plan.priceAlerts.filter((alert) => alert.isActive).length,
+      0
+    );
+    this.logger.log(
+      `Checking ${totalActiveAlerts} active price alert(s) across ${eligiblePlans.length} plan(s)`
+    );
+
     const uniqueSymbols = new Map<
       string,
       { dataSource: PriceAlert['dataSource']; symbol: string }
@@ -92,8 +100,13 @@ export class PriceAlertService {
         const currentValue = quote?.marketPrice;
 
         if (currentValue === undefined || currentValue === null) {
+          this.logger.warn(`No live quote returned for ${alert.symbol} (${alert.dataSource})`);
           continue;
         }
+
+        this.logger.log(
+          `${alert.symbol} current=${currentValue} target=${this.isConditionMet(alert.condition, currentValue, alert.targetValue) ? 'MET' : 'not met'} (${alert.condition} ${alert.targetValue})`
+        );
 
         if (!this.isConditionMet(alert.condition, currentValue, alert.targetValue)) {
           continue;
@@ -115,6 +128,11 @@ export class PriceAlertService {
               },
               where: { id: alert.id }
             });
+            this.logger.log(`Price alert email sent for ${alert.symbol}, alert deactivated`);
+          } else {
+            this.logger.warn(
+              `sendPriceAlertEmail returned false for ${alert.symbol} (check SMTP_USER config)`
+            );
           }
         } catch (error) {
           this.logger.error(

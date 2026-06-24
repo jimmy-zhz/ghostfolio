@@ -592,8 +592,12 @@
                         >{{ conditionLabel(alert.condition) }} {{ alert.targetValue }}</span
                       >
                     </div>
-                    <button color="warn" mat-icon-button (click)="onDeletePriceAlert(alert.id)">
-                      <mat-icon>delete</mat-icon>
+                    <button
+                      mat-icon-button
+                      style="margin-right: 10px; width:100px; font-size:16px; color:red"
+                      (click)="onDeletePriceAlert(alert.id)"
+                    >
+                      delete
                     </button>
                   </div>
                   @if (alert.messageTemplate) {
