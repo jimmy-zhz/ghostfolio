@@ -68,3 +68,17 @@
   min-width: unset;
   padding: 0 8px;
 }
+
+.list-row-divider {
+  border-bottom: 1px solid rgba(var(--palette-foreground-base), 0.08);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+:host-context(.theme-dark) {
+  .list-row-divider {
+    border-bottom-color: rgba(var(--palette-foreground-base-dark), 0.08);
+  }
+}

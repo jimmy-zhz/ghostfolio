@@ -184,7 +184,7 @@
               <mat-card-content class="py-2">
                 @for (action of rebalancingResult.actions; track action.symbol) {
                   <div
-                    class="d-flex align-items-center py-2 border-bottom gap-3"
+                    class="d-flex align-items-center py-2 list-row-divider gap-3"
                   >
                     <!-- Symbol + weight arrow -->
                     <div style="min-width: 180px;">
@@ -441,7 +441,7 @@
               }
               @for (signal of signals; track signal.id) {
                 <div
-                  class="d-flex align-items-start justify-content-between border-bottom py-2"
+                  class="d-flex align-items-start justify-content-between list-row-divider py-2"
                 >
                   <div>
                     <div>

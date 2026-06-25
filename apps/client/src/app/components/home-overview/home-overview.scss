@@ -2,8 +2,40 @@
   display: block;
   height: 100%;
 
+  .overview {
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: transparent;
+      border-radius: 2px;
+    }
+
+    &:hover {
+      scrollbar-color: rgba(var(--palette-foreground-base), 0.2) transparent;
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(var(--palette-foreground-base), 0.2);
+      }
+    }
+  }
+
+  .signals-divider {
+    border: none;
+    border-top: 1px solid rgba(var(--palette-foreground-base), 0.08);
+    opacity: 1;
+  }
+
   .chart-container {
     aspect-ratio: 16 / 9;
+    flex-shrink: 0;
     height: auto;
     max-width: 50rem;
 
@@ -32,5 +64,20 @@
 
   .introduction {
     max-width: 50rem;
+  }
+}
+
+:host-context(.theme-dark) {
+  .signals-divider {
+    border-top-color: rgba(var(--palette-foreground-base-dark), 0.08);
+  }
+
+  .overview:hover {
+    scrollbar-color: rgba(var(--palette-foreground-base-dark), 0.2)
+      transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(var(--palette-foreground-base-dark), 0.2);
+    }
   }
 }
