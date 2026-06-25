@@ -121,7 +121,7 @@
             </mat-card-header>
             <mat-card-content class="py-2">
               @for (signal of investmentSignals(); track signal.id) {
-                <div class="d-flex align-items-center justify-content-between py-1 border-bottom">
+                <div class="d-flex align-items-center justify-content-between py-1 signal-row-divider">
                   <div>
                     <strong>{{ signal.symbol }}</strong>
                     <span class="ms-2 text-muted" style="font-size: 13px;">

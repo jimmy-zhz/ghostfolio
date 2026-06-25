@@ -5,25 +5,11 @@
   .overview {
     overflow-x: hidden;
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
+    scrollbar-width: none;
     -ms-overflow-style: none;
 
     &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: transparent;
-      border-radius: 2px;
-    }
-
-    &:hover {
-      scrollbar-color: rgba(var(--palette-foreground-base), 0.2) transparent;
-
-      &::-webkit-scrollbar-thumb {
-        background-color: rgba(var(--palette-foreground-base), 0.2);
-      }
+      display: none;
     }
   }
 
@@ -31,6 +17,14 @@
     border: none;
     border-top: 1px solid rgba(var(--palette-foreground-base), 0.08);
     opacity: 1;
+  }
+
+  .signal-row-divider {
+    border-bottom: 1px solid rgba(var(--palette-foreground-base), 0.08);
+
+    &:last-child {
+      border-bottom: none;
+    }
   }
 
   .chart-container {
@@ -72,12 +66,7 @@
     border-top-color: rgba(var(--palette-foreground-base-dark), 0.08);
   }
 
-  .overview:hover {
-    scrollbar-color: rgba(var(--palette-foreground-base-dark), 0.2)
-      transparent;
-
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(var(--palette-foreground-base-dark), 0.2);
-    }
+  .signal-row-divider {
+    border-bottom-color: rgba(var(--palette-foreground-base-dark), 0.08);
   }
 }
