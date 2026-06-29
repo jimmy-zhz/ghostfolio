@@ -22,8 +22,19 @@ export class InvestmentPlanService {
   public constructor(private readonly prismaService: PrismaService) {}
 
   public async getPlanByUserId(userId: string): Promise<PlanWithRelations | null> {
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
     return this.prismaService.investmentPlan.findUnique({
-      include: { allocations: true, dcaSchedules: true, priceAlerts: true },
+      include: {
+        allocations: true,
+        dcaSchedules: true,
+        priceAlerts: {
+          where: {
+            OR: [{ isActive: true }, { triggeredAt: { gte: oneDayAgo } }]
+          }
+        }
+      },
       where: { userId }
     });
   }
@@ -101,10 +112,18 @@ export class InvestmentPlanService {
   public async getRecentSignals(planId: string, days = 30): Promise<InvestmentSignal[]> {
     const since = new Date();
     since.setDate(since.getDate() - days);
+
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
     return this.prismaService.investmentSignal.findMany({
       orderBy: { date: 'desc' },
       take: 50,
-      where: { date: { gte: since }, planId }
+      where: {
+        date: { gte: since },
+        planId,
+        OR: [{ status: SignalStatus.PENDING }, { date: { gte: oneDayAgo } }]
+      }
     });
   }
 
