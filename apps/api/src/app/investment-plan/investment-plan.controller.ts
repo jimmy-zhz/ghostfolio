@@ -45,16 +45,13 @@ export class InvestmentPlanController {
 
     let deployedCapital = 0;
     try {
-      const { holdings } = await this.portfolioService.getDetails({
-        filters: [],
-        impersonationId: undefined,
-        userId: this.request.user.id,
-        withMarkets: false
-      });
-      deployedCapital = Object.values(holdings).reduce(
-        (sum: number, h: any) => sum + (h.investment ?? 0),
-        0
-      );
+      const { totalInvestmentInBaseCurrency } =
+        await this.portfolioService.getAccountsWithAggregations({
+          filters: [],
+          userId: this.request.user.id,
+          withExcludedAccounts: true
+        });
+      deployedCapital = totalInvestmentInBaseCurrency;
     } catch {
       // ignore if portfolio data is unavailable
     }
