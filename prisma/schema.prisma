@@ -371,6 +371,9 @@ model InvestmentPlan {
   notifyEmail          String?
   notifyLanguage       String                    @default("en")
   emailEnabled         Boolean                   @default(false)
+  subscribeRebalancing Boolean                   @default(true)
+  subscribeDca         Boolean                   @default(true)
+  subscribePriceAlert  Boolean                   @default(true)
   // Capital pool tiers
   cashReserve          Float                     @default(0)
   cashBuffer           Float                     @default(0)

@@ -113,6 +113,9 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     notifyLanguage: string;
     preservationBucket: number;
     sipMonthlyBudget: number;
+    subscribeDca: boolean;
+    subscribePriceAlert: boolean;
+    subscribeRebalancing: boolean;
   } = {
     capitalPool: 0,
     cashBuffer: 0,
@@ -122,7 +125,10 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     notifyEmail: '',
     notifyLanguage: 'en',
     preservationBucket: 0,
-    sipMonthlyBudget: 0
+    sipMonthlyBudget: 0,
+    subscribeDca: true,
+    subscribePriceAlert: true,
+    subscribeRebalancing: true
   };
   public aiReport = '';
   public isCopyingPrompt = false;
@@ -387,7 +393,10 @@ export class GfInvestmentPlanPageComponent implements OnInit {
             notifyEmail: plan.notifyEmail ?? '',
             notifyLanguage: plan.notifyLanguage,
             preservationBucket: plan.preservationBucket ?? 0,
-            sipMonthlyBudget: plan.sipMonthlyBudget ?? 0
+            sipMonthlyBudget: plan.sipMonthlyBudget ?? 0,
+            subscribeDca: plan.subscribeDca ?? true,
+            subscribePriceAlert: plan.subscribePriceAlert ?? true,
+            subscribeRebalancing: plan.subscribeRebalancing ?? true
           };
           this.emailEnabled = plan.emailEnabled;
           this.allocations = plan.allocations ?? [];

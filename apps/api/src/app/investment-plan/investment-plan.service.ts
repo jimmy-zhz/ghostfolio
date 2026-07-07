@@ -55,6 +55,9 @@ export class InvestmentPlanService {
         notifyLanguage: (data.notifyLanguage as string) ?? 'en',
         preservationBucket: (data.preservationBucket as number) ?? 0,
         sipMonthlyBudget: (data.sipMonthlyBudget as number) ?? 0,
+        subscribeDca: (data.subscribeDca as boolean) ?? true,
+        subscribePriceAlert: (data.subscribePriceAlert as boolean) ?? true,
+        subscribeRebalancing: (data.subscribeRebalancing as boolean) ?? true,
         userId
       },
       update: data,

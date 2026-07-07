@@ -131,12 +131,12 @@ export class CronService {
 
     for (const plan of plans) {
       // 1. Generate DCA signals — only while the master email switch is on
-      if (plan.emailEnabled && plan.notifyEmail) {
+      if (plan.emailEnabled && plan.notifyEmail && plan.subscribeDca) {
         await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
       }
 
       // 2. Generate Rebalancing signals (at most once per week, deduped in service)
-      if (plan.allocations?.length > 0) {
+      if (plan.subscribeRebalancing && plan.allocations?.length > 0) {
         try {
           const portfolioService = await this.resolveRequestScoped(PortfolioService, plan.userId);
           const { holdings } = await portfolioService.getDetails({
@@ -159,9 +159,18 @@ export class CronService {
       // 3. Send email with all pending actionable signals
       if (plan.emailEnabled && plan.notifyEmail) {
         const signals = await this.investmentPlanService.getPendingSignals(plan.id);
-        const actionableSignals = signals.filter(
-          (s) => s.type !== 'DCA_WAIT' && !s.emailSent
-        );
+        const actionableSignals = signals.filter((s) => {
+          if (s.type === 'DCA_WAIT' || s.emailSent) {
+            return false;
+          }
+          if (s.type === 'DCA_BUY') {
+            return plan.subscribeDca;
+          }
+          if (s.type === 'REBALANCE_BUY' || s.type === 'REBALANCE_SELL') {
+            return plan.subscribeRebalancing;
+          }
+          return true;
+        });
 
         if (actionableSignals.length > 0) {
           // Gather holdings summary for AI prompt context

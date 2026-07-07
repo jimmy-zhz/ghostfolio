@@ -51,6 +51,7 @@ export class PriceAlertService {
       (plan) =>
         plan.emailEnabled &&
         plan.notifyEmail &&
+        plan.subscribePriceAlert &&
         plan.priceAlerts?.some((alert) => alert.isActive)
     );
 

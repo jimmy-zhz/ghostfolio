@@ -73,7 +73,10 @@ export class InvestmentPlanController {
         notifyLanguage: 'en',
         preservationBucket: 0,
         priceAlerts: [],
-        sipMonthlyBudget: 0
+        sipMonthlyBudget: 0,
+        subscribeDca: true,
+        subscribePriceAlert: true,
+        subscribeRebalancing: true
       };
     }
 
@@ -95,6 +98,9 @@ export class InvestmentPlanController {
       notifyLanguage?: string;
       preservationBucket?: number;
       sipMonthlyBudget?: number;
+      subscribeDca?: boolean;
+      subscribePriceAlert?: boolean;
+      subscribeRebalancing?: boolean;
     }
   ) {
     const result = await this.investmentPlanService.upsertPlan(

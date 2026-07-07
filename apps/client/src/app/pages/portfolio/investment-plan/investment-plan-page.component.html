@@ -135,8 +135,29 @@
               <mat-card-title i18n>Email Notifications</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
-              <mat-checkbox class="mb-3" [(ngModel)]="emailEnabled" i18n
+              <mat-checkbox class="mb-3 d-block" [(ngModel)]="emailEnabled" i18n
                 >Enable email notifications</mat-checkbox
+              >
+              <mat-checkbox
+                class="d-block mb-2 ms-4"
+                [disabled]="!emailEnabled"
+                [(ngModel)]="plan.subscribeRebalancing"
+                i18n
+                >Subscribe to Rebalancing signals</mat-checkbox
+              >
+              <mat-checkbox
+                class="d-block mb-2 ms-4"
+                [disabled]="!emailEnabled"
+                [(ngModel)]="plan.subscribeDca"
+                i18n
+                >Subscribe to DCA signals</mat-checkbox
+              >
+              <mat-checkbox
+                class="d-block mb-3 ms-4"
+                [disabled]="!emailEnabled"
+                [(ngModel)]="plan.subscribePriceAlert"
+                i18n
+                >Subscribe to Price Alert signals</mat-checkbox
               >
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label i18n>Notification email</mat-label>
