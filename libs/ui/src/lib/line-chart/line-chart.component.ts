@@ -7,7 +7,7 @@ import { ColorScheme } from '@ghostfolio/common/types';
 
 
 import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, type ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
-import { type AnimationsSpec, Chart, Filler, LinearScale, LineController, LineElement, PointElement, TimeScale, Tooltip, type TooltipOptions } from 'chart.js';
+import { type AnimationsSpec, Chart, Filler, LinearScale, LineController, LineElement, PointElement, type ScriptableTooltipContext, TimeScale, Tooltip, type TooltipItem, type TooltipOptions } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import annotationPlugin, { type AnnotationOptions } from 'chartjs-plugin-annotation';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
@@ -72,6 +72,8 @@ export class GfLineChartComponent
 
   private annotationRevealTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly ANIMATION_DURATION = 800;
+  private readonly marketChangeLabel = $localize`Market Change`;
+  private readonly sharesLabel = $localize`Shares`;
 
   public constructor(private changeDetectorRef: ChangeDetectorRef) {
     Chart.register(
@@ -457,17 +459,132 @@ export class GfLineChartComponent
   }
 
   private getTooltipPluginConfiguration(): Partial<TooltipOptions<'line'>> {
+    const tooltipOptions = getTooltipOptions<'line'>({
+      colorScheme: this.colorScheme,
+      currency: this.currency,
+      locale: this.locale,
+      unit: this.unit
+    });
+
     return {
-      ...getTooltipOptions({
-        colorScheme: this.colorScheme,
-        currency: this.currency,
-        locale: this.locale,
-        unit: this.unit
-      }),
+      ...tooltipOptions,
+      // @ts-ignore: no need to set all attributes in callbacks
+      callbacks: {
+        ...tooltipOptions.callbacks,
+        afterBody: (tooltipItems) => {
+          return this.getMarketChangeTooltipLines(tooltipItems);
+        },
+        footer: (tooltipItems) => {
+          return this.getTransactionQuantityTooltipLines(tooltipItems);
+        }
+      },
+      footerColor: (context: ScriptableTooltipContext<'line'>) => {
+        return this.getTransactionQuantityTooltipColor(context.tooltipItems);
+      },
       mode: 'index',
       position: 'top',
       xAlign: 'center',
       yAlign: 'bottom'
     };
+  }
+
+  private getDateForTooltipItems(tooltipItems: TooltipItem<'line'>[]) {
+    const dataIndex = tooltipItems?.[0]?.dataIndex;
+
+    return dataIndex != null
+      ? this.historicalDataItems?.[dataIndex]?.date
+      : undefined;
+  }
+
+  private getMarketChangeTooltipLines(tooltipItems: TooltipItem<'line'>[]) {
+    const dataIndex = tooltipItems?.[0]?.dataIndex;
+
+    if (dataIndex == null) {
+      return [];
+    }
+
+    const marketPrice = this.historicalDataItems?.[dataIndex]?.value;
+    const quantity = this.historicalDataItems?.[dataIndex]?.quantity;
+    const averagePrice = this.benchmarkDataItems?.[dataIndex]?.value;
+
+    if (marketPrice == null || averagePrice == null || quantity == null) {
+      return [];
+    }
+
+    const marketChange = (marketPrice - averagePrice) * quantity;
+
+    return [`${this.marketChangeLabel}: ${this.formatAmount(marketChange)}`];
+  }
+
+  private getTransactionQuantityTooltipLines(
+    tooltipItems: TooltipItem<'line'>[]
+  ) {
+    const date = this.getDateForTooltipItems(tooltipItems);
+
+    if (!date) {
+      return [];
+    }
+
+    const buyMarker = this.buyDateMarkers?.find((marker) => {
+      return marker.date === date;
+    });
+
+    if (buyMarker?.quantity) {
+      const amount = buyMarker.quantity * buyMarker.value;
+
+      return [
+        `${this.sharesLabel}: +${buyMarker.quantity} (${this.formatAmount(amount)})`
+      ];
+    }
+
+    const sellMarker = this.sellDateMarkers?.find((marker) => {
+      return marker.date === date;
+    });
+
+    if (sellMarker?.quantity) {
+      const amount = -(sellMarker.quantity * sellMarker.value);
+
+      return [
+        `${this.sharesLabel}: -${sellMarker.quantity} (${this.formatAmount(amount)})`
+      ];
+    }
+
+    return [];
+  }
+
+  private formatAmount(amount: number) {
+    const sign = amount >= 0 ? '+' : '';
+    const formattedAmount = amount.toLocaleString(this.locale, {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2
+    });
+
+    return `${sign}${formattedAmount}${this.currency ? ` ${this.currency}` : ''}`;
+  }
+
+  private getTransactionQuantityTooltipColor(
+    tooltipItems: TooltipItem<'line'>[]
+  ) {
+    const date = this.getDateForTooltipItems(tooltipItems);
+
+    if (date) {
+      if (
+        this.buyDateMarkers?.some((marker) => {
+          return marker.date === date;
+        })
+      ) {
+        return 'rgb(0, 177, 0)';
+      }
+
+      if (
+        this.sellDateMarkers?.some((marker) => {
+          return marker.date === date;
+        })
+      ) {
+        return 'rgb(177, 0, 0)';
+      }
+    }
+
+    return `rgb(${getTextColor(this.colorScheme)})`;
   }
 }

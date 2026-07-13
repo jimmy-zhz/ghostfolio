@@ -16,6 +16,7 @@ import {
   ElementRef,
   Input,
   OnChanges,
+  signal,
   ViewChild
 } from '@angular/core';
 import { IonIcon } from '@ionic/angular/standalone';
@@ -44,8 +45,21 @@ export class GfPortfolioPerformanceComponent implements OnChanges {
 
   @ViewChild('value') value: ElementRef;
 
+  public showSimpleReturn = signal(false);
+
   public constructor(private notificationService: NotificationService) {
     addIcons({ timeOutline });
+  }
+
+  public get simpleReturnPercentage() {
+    return this.performance?.totalInvestmentValueWithCurrencyEffect
+      ? this.performance.netPerformanceWithCurrencyEffect /
+          this.performance.totalInvestmentValueWithCurrencyEffect
+      : undefined;
+  }
+
+  public onToggleSimpleReturn() {
+    this.showSimpleReturn.update((value) => !value);
   }
 
   public ngOnChanges() {

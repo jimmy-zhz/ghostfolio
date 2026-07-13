@@ -131,7 +131,10 @@
         >(ROAI)</abbr
       >
     </div>
-    <div class="flex-column flex-wrap justify-content-end">
+    <div
+      class="flex-column flex-wrap justify-content-end"
+      [class.gf-simple-return]="showSimpleReturn()"
+    >
       <gf-value
         class="justify-content-end"
         position="end"
@@ -141,7 +144,9 @@
         [value]="
           isLoading
             ? undefined
-            : summary?.netPerformancePercentageWithCurrencyEffect
+            : showSimpleReturn()
+              ? simpleReturnPercentage
+              : summary?.netPerformancePercentageWithCurrencyEffect
         "
       />
     </div>

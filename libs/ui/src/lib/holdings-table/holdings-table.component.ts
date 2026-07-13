@@ -77,6 +77,7 @@ export class GfHoldingsTableComponent {
     }
 
     columns.push('performanceInPercentage');
+    columns.push('simpleReturnInPercentage');
     return columns;
   });
 
@@ -87,7 +88,13 @@ export class GfHoldingsTableComponent {
   protected readonly isLoading = computed(() => !this.holdings());
 
   public constructor() {
-    this.dataSource.sortingDataAccessor = getLowercase;
+    this.dataSource.sortingDataAccessor = (data, sortHeaderId) => {
+      if (sortHeaderId === 'simpleReturnInPercentage') {
+        return this.getSimpleReturn(data) ?? -Infinity;
+      }
+
+      return getLowercase(data, sortHeaderId);
+    };
 
     // Reactive data update
     effect(() => {
@@ -99,6 +106,12 @@ export class GfHoldingsTableComponent {
       this.dataSource.paginator = this.paginator();
       this.dataSource.sort = this.sort();
     });
+  }
+
+  protected getSimpleReturn(element: PortfolioPosition): number | undefined {
+    return element?.investment
+      ? element.netPerformanceWithCurrencyEffect / element.investment
+      : undefined;
   }
 
   protected canShowDetails(holding: PortfolioPosition): boolean {

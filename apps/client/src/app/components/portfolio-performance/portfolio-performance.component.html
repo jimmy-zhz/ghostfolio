@@ -46,7 +46,11 @@
           "
         />
       </div>
-      <div class="col">
+      <div
+        class="col cursor-pointer"
+        [class.gf-simple-return]="showSimpleReturn()"
+        (click)="onToggleSimpleReturn()"
+      >
         <gf-value
           [colorizeSign]="true"
           [isPercent]="true"
@@ -54,7 +58,9 @@
           [value]="
             isLoading
               ? undefined
-              : performance?.netPerformancePercentageWithCurrencyEffect
+              : showSimpleReturn()
+                ? simpleReturnPercentage
+                : performance?.netPerformancePercentageWithCurrencyEffect
           "
         />
       </div>

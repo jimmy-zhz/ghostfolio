@@ -318,7 +318,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
             SymbolProfile?.userId === this.user?.id;
 
           this.historicalDataItems = historicalData.map(
-            ({ averagePrice, date, marketPrice }) => {
+            ({ averagePrice, date, marketPrice, quantity }) => {
               this.benchmarkDataItems.push({
                 date,
                 value: averagePrice
@@ -326,6 +326,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
 
               return {
                 date,
+                quantity,
                 value: marketPrice
               };
             }
@@ -648,14 +649,16 @@ export class GfHoldingDetailDialogComponent implements OnInit {
 
         this.buyDateMarkers = activities
           .filter(({ type }) => type === 'BUY')
-          .map(({ date, unitPrice }) => ({
+          .map(({ date, quantity, unitPrice }) => ({
+            quantity,
             date: format(new Date(date), DATE_FORMAT),
             value: unitPrice
           }));
 
         this.sellDateMarkers = activities
           .filter(({ type }) => type === 'SELL')
-          .map(({ date, unitPrice }) => ({
+          .map(({ date, quantity, unitPrice }) => ({
+            quantity,
             date: format(new Date(date), DATE_FORMAT),
             value: unitPrice
           }));

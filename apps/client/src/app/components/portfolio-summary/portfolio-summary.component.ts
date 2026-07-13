@@ -11,7 +11,9 @@ import {
   EventEmitter,
   Input,
   OnChanges,
-  Output
+  OnDestroy,
+  Output,
+  signal
 } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { IonIcon } from '@ionic/angular/standalone';
@@ -29,7 +31,7 @@ import {
   styleUrls: ['./portfolio-summary.component.scss'],
   templateUrl: './portfolio-summary.component.html'
 })
-export class GfPortfolioSummaryComponent implements OnChanges {
+export class GfPortfolioSummaryComponent implements OnChanges, OnDestroy {
   @Input() baseCurrency: string;
   @Input() deviceType: string;
   @Input() hasImpersonationId: boolean;
@@ -54,7 +56,10 @@ export class GfPortfolioSummaryComponent implements OnChanges {
   );
 
   public precision = 2;
+  public showSimpleReturn = signal(false);
   public timeInMarket: string;
+
+  private simpleReturnToggleIntervalId: ReturnType<typeof setInterval>;
 
   public get buyingPowerPercentage() {
     return this.summary?.totalValueInBaseCurrency
@@ -76,8 +81,23 @@ export class GfPortfolioSummaryComponent implements OnChanges {
       : 0;
   }
 
+  public get simpleReturnPercentage() {
+    return this.summary?.totalInvestmentValueWithCurrencyEffect
+      ? this.summary.netPerformanceWithCurrencyEffect /
+          this.summary.totalInvestmentValueWithCurrencyEffect
+      : undefined;
+  }
+
   public constructor(private notificationService: NotificationService) {
     addIcons({ ellipsisHorizontalCircleOutline, informationCircleOutline });
+
+    this.simpleReturnToggleIntervalId = setInterval(() => {
+      this.showSimpleReturn.update((value) => !value);
+    }, 60000);
+  }
+
+  public ngOnDestroy() {
+    clearInterval(this.simpleReturnToggleIntervalId);
   }
 
   public ngOnChanges() {

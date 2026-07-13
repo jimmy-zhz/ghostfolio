@@ -180,7 +180,7 @@
       </td>
     </ng-container>
 
-    <ng-container matColumnDef="performanceInPercentage" stickyEnd>
+    <ng-container matColumnDef="performanceInPercentage">
       <th
         *matHeaderCellDef
         class="justify-content-end px-1"
@@ -201,6 +201,27 @@
                 ? undefined
                 : element.netPerformancePercentWithCurrencyEffect
             "
+          />
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="simpleReturnInPercentage" stickyEnd>
+      <th
+        *matHeaderCellDef
+        class="justify-content-end px-1"
+        mat-header-cell
+        mat-sort-header="simpleReturnInPercentage"
+      >
+        <span i18n>Simple Return</span>
+      </th>
+      <td *matCellDef="let element" class="px-1" mat-cell>
+        <div class="d-flex justify-content-end">
+          <gf-value
+            [colorizeSign]="true"
+            [isPercent]="true"
+            [locale]="locale()"
+            [value]="isLoading() ? undefined : getSimpleReturn(element)"
           />
         </div>
       </td>
