@@ -1,9 +1,8 @@
-import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
 import { Filter, PortfolioPosition, User } from '@ghostfolio/common/interfaces';
 import { InternalRoute } from '@ghostfolio/common/routes/interfaces/internal-route.interface';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { AccountWithPlatform, DateRange } from '@ghostfolio/common/types';
-import { AdminService, DataService } from '@ghostfolio/ui/services';
+import { DataService } from '@ghostfolio/ui/services';
 
 import { FocusKeyManager } from '@angular/cdk/a11y';
 import {
@@ -31,7 +30,6 @@ import { MatMenuTrigger } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { RouterModule } from '@angular/router';
 import { IonIcon } from '@ionic/angular/standalone';
-import { AssetClass, DataSource } from '@prisma/client';
 import { differenceInYears, eachYearOfInterval, format } from 'date-fns';
 import Fuse from 'fuse.js';
 import { addIcons } from 'ionicons';
@@ -56,7 +54,12 @@ import {
 import { translate } from '../i18n';
 import {
   GfPortfolioFilterFormComponent,
-  PortfolioFilterFormValue
+  PortfolioFilterFormValue,
+  getAssetClassFilters,
+  getFiltersFromPortfolioFilterFormValue,
+  getHoldingsForFilter,
+  getPortfolioFilterFormValue,
+  getTagFilters
 } from '../portfolio-filter-form';
 import { GfAssistantListItemComponent } from './assistant-list-item/assistant-list-item.component';
 import { SearchMode } from './enums/search-mode';
@@ -155,7 +158,6 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   private preselectionTimeout: ReturnType<typeof setTimeout>;
 
   public constructor(
-    private adminService: AdminService,
     private changeDetectorRef: ChangeDetectorRef,
     private dataService: DataService,
     private destroyRef: DestroyRef
@@ -195,17 +197,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   public ngOnInit() {
-    this.assetClasses = Object.keys(AssetClass)
-      .map((assetClass) => {
-        return {
-          id: assetClass,
-          label: translate(assetClass),
-          type: 'ASSET_CLASS'
-        } satisfies Filter;
-      })
-      .sort((a, b) => {
-        return a.label.localeCompare(b.label);
-      });
+    this.assetClasses = getAssetClassFilters();
 
     this.searchFormControl.valueChanges
       .pipe(
@@ -397,19 +389,17 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       });
     }
 
-    if (this.user?.settings?.isExperimentalFeatures) {
-      this.dateRangeOptions = this.dateRangeOptions.concat(
-        eachYearOfInterval({
-          end: new Date(),
-          start: this.user?.dateOfFirstActivity ?? new Date()
+    this.dateRangeOptions = this.dateRangeOptions.concat(
+      eachYearOfInterval({
+        end: new Date(),
+        start: this.user?.dateOfFirstActivity ?? new Date()
+      })
+        .map((date) => {
+          return { label: format(date, 'yyyy'), value: format(date, 'yyyy') };
         })
-          .map((date) => {
-            return { label: format(date, 'yyyy'), value: format(date, 'yyyy') };
-          })
-          .slice(0, -1)
-          .reverse()
-      );
-    }
+        .slice(0, -1)
+        .reverse()
+    );
 
     if (
       this.user?.dateOfFirstActivity &&
@@ -440,21 +430,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       this.portfolioFilterFormControl.disable({ emitEvent: false });
     }
 
-    this.tags =
-      this.user?.tags
-        ?.filter(({ isUsed }) => {
-          return isUsed;
-        })
-        ?.map(({ id, name }) => {
-          return {
-            id,
-            label: translate(name),
-            type: 'TAG'
-          } satisfies Filter;
-        })
-        ?.sort((a, b) => {
-          return a.label.localeCompare(b.label);
-        }) ?? [];
+    this.tags = getTagFilters(this.user?.tags);
   }
 
   public initialize() {
@@ -503,18 +479,7 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       .fetchPortfolioHoldings()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ holdings }) => {
-        this.holdings = holdings
-          .filter(({ assetProfile }) => {
-            return (
-              assetProfile.assetSubClass &&
-              !['CASH'].includes(assetProfile.assetSubClass)
-            );
-          })
-          .sort((a, b) => {
-            return (a.assetProfile.name ?? '').localeCompare(
-              b.assetProfile.name ?? ''
-            );
-          });
+        this.holdings = getHoldingsForFilter(holdings);
 
         this.setPortfolioFilterFormValues();
 
@@ -523,30 +488,12 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   public onApplyFilters() {
-    const filterValue = this.portfolioFilterFormControl.value;
-
-    this.filtersChanged.emit([
-      {
-        id: filterValue?.account ?? '',
-        type: 'ACCOUNT'
-      },
-      {
-        id: filterValue?.assetClass ?? '',
-        type: 'ASSET_CLASS'
-      },
-      {
-        id: filterValue?.holding?.assetProfile?.dataSource ?? '',
-        type: 'DATA_SOURCE'
-      },
-      {
-        id: filterValue?.holding?.assetProfile?.symbol ?? '',
-        type: 'SYMBOL'
-      },
-      {
-        id: filterValue?.tag ?? '',
-        type: 'TAG'
-      }
-    ]);
+    this.filtersChanged.emit(
+      getFiltersFromPortfolioFilterFormValue(
+        this.portfolioFilterFormControl.value,
+        { includeEmpty: true }
+      )
+    );
 
     this.onCloseAssistant();
   }
@@ -676,8 +623,8 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
   private searchAssetProfiles(
     aSearchTerm: string
   ): Observable<SearchResultItem[]> {
-    return this.adminService
-      .fetchAdminMarketData({
+    return this.dataService
+      .fetchAssetProfiles({
         filters: [
           {
             id: aSearchTerm,
@@ -690,8 +637,8 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
         catchError(() => {
           return EMPTY;
         }),
-        map(({ marketData }) => {
-          return marketData.map(
+        map(({ assetProfiles }) => {
+          return assetProfiles.map(
             ({ assetSubClass, currency, dataSource, name, symbol }) => {
               return {
                 currency,
@@ -766,31 +713,41 @@ export class GfAssistantComponent implements OnChanges, OnDestroy, OnInit {
       return {
         routerLink,
         mode: SearchMode.QUICK_LINK as const,
-        name: title
+        name: title ?? ''
       };
     });
   }
 
   private setPortfolioFilterFormValues() {
-    const dataSource = this.user?.settings?.[
-      'filters.dataSource'
-    ] as DataSource;
-    const symbol = this.user?.settings?.['filters.symbol'];
-    const selectedHolding = this.holdings.find((holding) => {
-      return (
-        !!(dataSource && symbol) &&
-        getAssetProfileIdentifier({
-          dataSource: holding.assetProfile.dataSource,
-          symbol: holding.assetProfile.symbol
-        }) === getAssetProfileIdentifier({ dataSource, symbol })
-      );
-    });
+    const settings = this.user?.settings;
 
-    this.portfolioFilterFormControl.setValue({
-      account: this.user?.settings?.['filters.accounts']?.[0] ?? null,
-      assetClass: this.user?.settings?.['filters.assetClasses']?.[0] ?? null,
-      holding: selectedHolding ?? null,
-      tag: this.user?.settings?.['filters.tags']?.[0] ?? null
-    });
+    const filters = [
+      {
+        id: settings?.['filters.accounts']?.[0] ?? '',
+        type: 'ACCOUNT'
+      },
+      {
+        id: settings?.['filters.assetClasses']?.[0] ?? '',
+        type: 'ASSET_CLASS'
+      },
+      {
+        id: settings?.['filters.dataSource'] ?? '',
+        type: 'DATA_SOURCE'
+      },
+      {
+        id: settings?.['filters.symbol'] ?? '',
+        type: 'SYMBOL'
+      },
+      {
+        id: settings?.['filters.tags']?.[0] ?? '',
+        type: 'TAG'
+      }
+    ].filter(({ id }) => {
+      return !!id;
+    }) as Filter[];
+
+    this.portfolioFilterFormControl.setValue(
+      getPortfolioFilterFormValue(filters, this.holdings)
+    );
   }
 }

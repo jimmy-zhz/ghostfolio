@@ -1,4 +1,5 @@
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
+import { WHERE_ACCOUNT_NOT_EXCLUDED } from '@ghostfolio/api/helper/account.helper';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
@@ -15,6 +16,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AccountBalance, Prisma } from '@prisma/client';
 import { Big } from 'big.js';
 import { format, parseISO } from 'date-fns';
+import { groupBy } from 'lodash';
 
 @Injectable()
 export class AccountBalanceService {
@@ -144,16 +146,16 @@ export class AccountBalanceService {
   }): Promise<AccountBalancesResponse> {
     const where: Prisma.AccountBalanceWhereInput = { userId };
 
-    const accountFilter = filters?.find(({ type }) => {
-      return type === 'ACCOUNT';
+    const { ACCOUNT: [filterByAccount] = [] } = groupBy(filters, ({ type }) => {
+      return type;
     });
 
-    if (accountFilter) {
-      where.accountId = accountFilter.id;
+    if (filterByAccount) {
+      where.accountId = filterByAccount.id;
     }
 
     if (withExcludedAccounts === false) {
-      where.account = { isExcluded: false };
+      where.account = WHERE_ACCOUNT_NOT_EXCLUDED;
     }
 
     const balances = await this.prismaService.accountBalance.findMany({

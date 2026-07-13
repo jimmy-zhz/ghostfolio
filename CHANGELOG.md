@@ -7,16 +7,353 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+
+- Set the change detection strategy to `OnPush` in the _X-ray_ page
+
+## 3.25.0 - 2026-07-12
+
+### Changed
+
+- Changed the default value of the `DATA_SOURCE_FEAR_AND_GREED_INDEX_STOCKS` environment variable from `RAPID_API` to `MANUAL`
+- Improved the language localization for Dutch (`nl`)
+- Upgraded `helmet` from version `7.0.0` to `8.2.0`
+
+### Fixed
+
+- Fixed the layout of the page tabs component by truncating long labels
+- Fixed the display of assets without a currency in the search results of the assistant
+- Fixed the display of assets without a currency in the symbol autocomplete component
+
+### Todo
+
+- **Breaking Change**: Set the environment variable `DATA_SOURCE_FEAR_AND_GREED_INDEX_STOCKS=RAPID_API` to keep using _Rapid API_ as the data source of the _Fear & Greed Index_ (market mood)
+
+## 3.24.0 - 2026-07-11
+
 ### Added
 
+- Exposed the `DATA_SOURCE_FEAR_AND_GREED_INDEX_STOCKS` environment variable to set the data source of the _Fear & Greed Index_ (market mood)
+- Exposed the `ENABLE_FEATURE_RATE_LIMITING` environment variable to control rate limiting for authentication and sign-up endpoints
+- Exposed the `TRUST_PROXY` environment variable to determine the client IP address when running behind a reverse proxy
+
+### Changed
+
+- Rounded the value of the _Fear & Greed Index_ (market mood)
+- Improved the language localization for Korean (`ko`)
+
+## 3.23.0 - 2026-07-10
+
+### Changed
+
+- Migrated the deprecated `@nx/webpack:webpack` executor to `@nx/webpack/plugin`
+- Set the change detection strategy to `OnPush` in the about page
+- Set the change detection strategy to `OnPush` in the admin control panel
+- Set the change detection strategy to `OnPush` in the blog page components
+- Set the change detection strategy to `OnPush` in the Frequently Asked Questions (FAQ) page
+- Set the change detection strategy to `OnPush` in the home page
+- Set the change detection strategy to `OnPush` in the markets overview
+- Set the change detection strategy to `OnPush` in the resources page
+- Set the change detection strategy to `OnPush` in the user account page
+- Set the change detection strategy to `OnPush` in the _Zen Mode_
+- Improved the language localization for Chinese (`zh`)
+- Improved the language localization for German (`de`)
+
+## 3.22.0 - 2026-07-08
+
+### Added
+
+- Added support for a copy-to-clipboard action in the alert dialog component
+
+### Changed
+
+- Improved the user account deletion flow in the user settings of the user account page
+- Improved the date formatting of the first activity in the historical market data table of the admin control panel
+- Set the change detection strategy to `OnPush` in the activities page
+- Set the change detection strategy to `OnPush` in the allocations page
+- Set the change detection strategy to `OnPush` in the analysis page
+- Set the change detection strategy to `OnPush` in the portfolio holdings page
+- Set the change detection strategy to `OnPush` in the activities page
+- Set the change detection strategy to `OnPush` in the _FIRE_ page
+- Set the change detection strategy to `OnPush` in the users section of the admin control panel
+- Hardened the endpoint to update a property of the admin control panel by validating the `key` path parameter
+- Renamed the `SymbolProfileOverrides` _Prisma_ data model to `AssetProfileOverrides` while keeping the database table name
+- Improved the language localization for Dutch (`nl`)
+- Improved the language localization for French (`fr`)
+- Improved the language localization for German (`de`)
+
+## 3.21.0 - 2026-07-05
+
+### Added
+
+- Added support for tags in the account (experimental)
+- Exposed the `PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_REMOVE_ON_FAIL` environment variable to control the removal of failed jobs in the portfolio snapshot computation queue
+
+### Changed
+
+- Set the change detection strategy to `OnPush` in the alert dialog component
+- Set the change detection strategy to `OnPush` in the confirmation dialog component
+- Set the change detection strategy to `OnPush` in the prompt dialog component
+- Set the change detection strategy to `OnPush` in the overview of the admin control panel
+- Set the change detection strategy to `OnPush` in the portfolio page
+- Deprecated the `isExcluded` attribute of the account in favor of the _Exclude from Analysis_ tag
+- Improved the language localization in the users table of the admin control panel
+- Improved the language localization for German (`de`)
+- Upgraded `envalid` from version `8.1.1` to `8.2.0`
+- Upgraded `stripe` from version `21.0.1` to `22.2.3`
+
+### Fixed
+
+- Fixed an issue with the custom tags of the user in the import functionality
+- Fixed the creation of the _Stripe_ checkout session for languages not supported by _Stripe_ (`ca` and `uk`)
+- Fixed the error handling in the endpoint to create a _Stripe_ checkout session
+
+## 3.20.0 - 2026-07-04
+
+### Changed
+
+- Refactored the rounding logic in the holding detail dialog
+- Refactored the rounding logic in the treemap chart component
+- Restricted the modification of activity tags in the impersonation mode
+- Hardened the endpoint of the public access for portfolio sharing by restricting it to public accesses
+- Improved the parsing of integer query parameters (`skip` and `take`) in the `GET api/v1/admin/user` endpoint
+- Improved the parsing of integer query parameters (`skip` and `take`) in the `GET api/v1/asset-profiles` endpoint
+- Improved the parsing of the integer query parameter (`includeHistoricalData`) in the `GET api/v1/market-data/markets` endpoint
+- Improved the parsing of the integer query parameter (`includeHistoricalData`) in the `GET api/v1/symbol/:dataSource/:symbol` endpoint
+- Harmonized the filter parsing using `groupBy` across various services
+- Improved the language localization by translating various tooltips across the application
+- Improved the language localization for German (`de`)
+- Improved the language localization for Ukrainian (`uk`)
+- Upgraded `yahoo-finance2` from version `3.14.3` to `3.15.4`
+
+### Fixed
+
+- Resolved an issue in the treemap chart component when the holdings list is empty
+- Fixed the handling of cash positions in the portfolio calculations when filtering by holding or tag
+- Fixed the handling of cash positions in the portfolio details when filtering
+- Fixed the market condition of the benchmarks in the twitter bot service when values round to zero
+
+## 3.19.1 - 2026-07-03
+
+### Added
+
+- Added support for routing outgoing requests through a per-domain proxy via the `PROXY_ROUTES` setting in the `FetchService`
+- Added `@prisma/config` as a development dependency used by the _Prisma Configuration File_
+
+### Changed
+
+- Harmonized the date picker styling across various components
+- Updated the _Privacy Policy_
+- Updated the _Terms of Service_
+- Improved the parsing of integer query parameters (`skip` and `take`) in the `GET api/v1/activities` endpoint
+- Improved the language localization for German (`de`)
+- Improved the language localization for Japanese (`ja`)
+- Upgraded `@ionic/angular` from version `8.8.5` to `8.8.12`
+- Upgraded `nestjs` from version `11.1.21` to `11.1.27`
+
+### Fixed
+
+- Fixed an issue where values incorrectly rounded to negative zero in the value component
+- Fixed the colorization of the change from all time high in the benchmark component when values round to zero
+- Fixed the market condition of the benchmarks when values round to zero
+- Fixed the validation of the data source field of an asset profile with market data
+- Fixed a recurring issue where single-value fields were incorrectly validated as arrays in various endpoints
+
+## 3.18.0 - 2026-06-28
+
+### Added
+
+- Added support for filtering in the public access for portfolio sharing (experimental)
+- Set up the language localization for Japanese (`ja`)
+
+### Changed
+
+- Improved the alias display in the access table to share the portfolio
+- Improved the language localization for German (`de`)
+
+### Fixed
+
+- Fixed a phantom `UNKNOWN` slice in the portfolio proportion chart component caused by floating-point rounding
+- Fixed the base currency for the total value calculation in the public access for portfolio sharing
+- Fixed an issue in the public access for portfolio sharing that exposed absolute values of the top holdings of ETFs
+- Fixed the time zone handling in the `api` test suite for deterministic execution in `UTC`
+
+## 3.17.0 - 2026-06-26
+
+### Added
+
+- Added `zod` as a root dependency to resolve peer dependency warnings
+
+### Changed
+
+- Improved the error message styling in the import activities dialog
+- Improved the grantee display in the access table to share the portfolio
+- Improved the country mapping for data providers
+- Upgraded `bull-board` from version `7.2.1` to `8.0.1`
+- Upgraded `Nx` from version `22.7.5` to `23.0.1`
+- Upgraded `prettier` from version `3.8.3` to `3.8.4`
+
+### Fixed
+
+- Improved the table headers’ alignment in the queue jobs table of the admin control panel
+
+## 3.16.0 - 2026-06-24
+
+### Added
+
+- Extended the user account settings with a copy-to-clipboard button for the user id
+- Added pagination to the platform management of the admin control panel
+- Added pagination to the tag management of the admin control panel
+- Extended the asset profile details dialog of the admin control panel with a copy-to-clipboard button for the ISIN number
+- Extended the asset profile details dialog of the admin control panel with a copy-to-clipboard button for the symbol
+
+### Changed
+
+- Improved the throughput of the market data gathering queue by applying the rate limit per data source
+- Decreased the rate limiter duration of the market data gathering queue jobs from 4 to 3 seconds
+- Removed the deprecated `SymbolProfile` field from the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+- Upgraded `@simplewebauthn/browser` and `@simplewebauthn/server` from version `13.2.2` to `13.3`
+
+### Fixed
+
+- Fixed an issue with hourly market data updates not refreshing prices for asset profiles with `MANUAL` data source
+- Fixed an issue with the log context formatting in the performance logging service
+
+## 3.15.1 - 2026-06-23
+
+### Changed
+
+- Improved the dynamic numerical precision for various values in the account detail dialog on mobile
+- Improved the dynamic numerical precision for various values in the holding detail dialog on mobile
+- Upgraded `@internationalized/number` from version `3.6.6` to `3.6.7`
+
+### Fixed
+
+- Fixed an issue where symbols with special characters caused API request failures by URL encoding the symbol
+- Fixed the disabled state of the delete action in the asset profiles actions menu of the historical market data table in the admin control panel
+- Fixed the persistence of an empty `locale` string in the scraper configuration
+- Fixed a transaction timeout that prevented gathering historical market data for symbols with a long history
+- Fixed an exception in various portfolio endpoints when historical exchange rate data is missing
+
+## 3.14.0 - 2026-06-22
+
+### Added
+
+- Exposed the `ENABLE_FEATURE_CRON` environment variable to control scheduled cron job execution
+- Exposed the `PROCESSOR_GATHER_STATISTICS_CONCURRENCY` environment variable to control the concurrency of the statistics gathering queue processor
+
+### Changed
+
+- Consolidated the exchange rates to be gathered with hourly market data
+- Improved the language localization for German (`de`)
+- Upgraded `@openrouter/ai-sdk-provider` from version `2.9.0` to `2.9.1`
+- Upgraded `undici` from version `7.24.4` to `8.5.0`
+
+### Fixed
+
+- Fixed an issue in the data provider service where asset profiles and historical data could be missing for symbols that exist in multiple data sources by keying the responses by the asset profile identifier
+- Resolved an exception in the benchmarks service when the current market price is unavailable
+
+## 3.13.0 - 2026-06-20
+
+### Added
+
+- Added an icon to indicate external links in the page tabs component
+- Added the Korean (`ko`) language to the footer
+- Added a data gathering frequency (`DAILY` or `HOURLY`) to the asset profile to control the market data gathering interval
+
+### Changed
+
+- Changed the _Fear & Greed Index_ (market mood) in the markets overview to use the stored market data instead of a live quote
+- Moved the endpoint to get the asset profiles from `GET api/v1/admin/market-data` to `GET api/v1/asset-profiles`
+- Moved the endpoint to get the asset profile details from `GET api/v1/market-data/:dataSource/:symbol` to `GET api/v1/asset-profiles/:dataSource/:symbol`
+- Added the selected asset profile count to the delete menu item of the historical market data table in the admin control panel
+- Added the selected asset profile count to the deletion confirmation dialog of the historical market data table in the admin control panel
+- Improved the sorting to be case-insensitive in the platform management of the admin control panel
+- Improved the sorting to be case-insensitive in the tag management of the admin control panel
+- Improved the language localization for German (`de`)
+- Upgraded `yahoo-finance2` from version `3.14.2` to `3.15.3`
+
+### Fixed
+
+- Fixed an issue with the localization of the country names
+- Fixed an issue in the data provider service where quotes could be missing for symbols that exist in multiple data sources by keying the quotes response by the asset profile identifier
+
+## 3.12.0 - 2026-06-17
+
+### Changed
+
+- Improved the styling of the checkboxes to consistently use the primary color in their states
+- Improved the account name display in the accounts table
+- Improved the name display in the activities table
+- Improved the last activity display in the users table of the admin control panel
+- Improved the registration display in the users table of the admin control panel
+- Improved the user id display in the users table of the admin control panel
+- Deprecated `SymbolProfile` in favor of `assetProfile` in the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol`
+- Improved the language localization for German (`de`)
+- Upgraded `svgmap` from version `2.19.3` to `2.21.0`
+
+### Fixed
+
+- Fixed a chart error on interaction by registering the annotation plugin early
+- Fixed an issue on the allocations page where clicking an account in the _By Account_ chart did not open the detail dialog
+- Restricted the maximum height of the import activities dialog
+- Fixed the dark mode styling of the safe withdrawal rate selector in the _FIRE_ section (experimental)
+
+## 3.11.0 - 2026-06-14
+
+### Added
+
+- Added support for a click handler in the page tabs component
+
+### Changed
+
+- Improved the styling of the tabs across various dialogs
+- Improved the styling of the page tabs component on desktop
+- Enabled the _Bull Dashboard_ tab in the admin control panel (experimental)
+- Migrated the settings dialog to customize the rule thresholds of the _X-ray_ page from `ngModel` to form control
+- Improved the language localization for Spanish (`es`)
+- Upgraded `bull-board` from version `7.1.5` to `7.2.1`
+- Upgraded `date-fns` from version `4.1.0` to `4.4.0`
+
+### Fixed
+
+- Improved the loading state when customizing the rule thresholds on the _X-ray_ page
+
+## 3.10.0 - 2026-06-13
+
+### Changed
+
+- Improved the dynamic numerical precision for various values in the account detail dialog on mobile
+- Improved the dynamic numerical precision for various values in the holding detail dialog on mobile
+- Improved the account name display in the activities table
+- Optimized the endpoint `GET api/v1/portfolio/holding/:dataSource/:symbol` by improving the processing of the historical market data
+
+### Fixed
+
+- Fixed an issue in the import dividends dialog
+- Fixed an issue where certain symbols were incorrectly identified as currencies in various data providers
+- Fixed the last request date in the users table of the admin control panel
+
+## 3.9.0 - 2026-06-12
+
+### Added
+
+- Extended the _Public API_ with the endpoint to update the asset profile data (`PATCH api/v1/asset-profiles/:dataSource/:symbol`) (experimental)
 - Added support for a dedicated _OpenRouter_ model for the `web_fetch` tool in the `FetchService`
 
 ### Changed
 
 - Prefilled the form in the account balance management with the current cash balance
 - Disabled the selection of future dates in the account balance management
+- Grouped commodities and cryptocurrencies into the unknown bucket of the allocations by continent, country, currency, market and sector charts on the allocations page
+- Moved the support for specific calendar year date ranges (`2025`, `2024`, `2023`, etc.) in the assistant from experimental to general availability
 - Migrated various components from `NgStyle` to style bindings
 - Improved the language localization for Korean (`ko`)
+
+### Fixed
+
+- Grouped activities without an account into the unknown bucket of the allocations by account and platform charts on the allocations page
 
 ## 3.8.0 - 2026-06-07
 

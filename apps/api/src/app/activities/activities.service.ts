@@ -3,6 +3,7 @@ import { AccountService } from '@ghostfolio/api/app/account/account.service';
 import { CashDetails } from '@ghostfolio/api/app/account/interfaces/cash-details.interface';
 import { AssetProfileChangedEvent } from '@ghostfolio/api/events/asset-profile-changed.event';
 import { PortfolioChangedEvent } from '@ghostfolio/api/events/portfolio-changed.event';
+import { WHERE_ACCOUNT_NOT_EXCLUDED } from '@ghostfolio/api/helper/account.helper';
 import { LogPerformance } from '@ghostfolio/api/interceptors/performance-logging/performance-logging.interceptor';
 import { BenchmarkService } from '@ghostfolio/api/services/benchmark/benchmark.service';
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
@@ -62,6 +63,43 @@ export class ActivitiesService {
     private readonly prismaService: PrismaService,
     private readonly symbolProfileService: SymbolProfileService
   ) {}
+
+  public areCashActivitiesExcludedByFilters(filters: Filter[] = []) {
+    const {
+      ASSET_CLASS: filtersByAssetClass = [],
+      DATA_SOURCE: [filterByDataSource] = [],
+      SYMBOL: [filterBySymbol] = [],
+      TAG: filtersByTag = []
+    } = groupBy(filters, ({ type }) => {
+      return type;
+    });
+
+    const isFilteredByAssetClassOtherThanLiquidity =
+      filtersByAssetClass.length > 0 &&
+      !filtersByAssetClass.some(({ id }) => {
+        return id === AssetClass.LIQUIDITY;
+      });
+
+    const isFilteredByAssetProfile = !!(filterByDataSource || filterBySymbol);
+    const isFilteredByTag = filtersByTag.length > 0;
+
+    const isFilteredByUnsupportedType = filters.some(({ type }) => {
+      return ![
+        'ACCOUNT',
+        'ASSET_CLASS',
+        'DATA_SOURCE',
+        'SYMBOL',
+        'TAG'
+      ].includes(type);
+    });
+
+    return (
+      isFilteredByAssetClassOtherThanLiquidity ||
+      isFilteredByAssetProfile ||
+      isFilteredByTag ||
+      isFilteredByUnsupportedType
+    );
+  }
 
   public async assignTags({
     dataSource,
@@ -393,17 +431,7 @@ export class ActivitiesService {
     userCurrency: string;
     userId: string;
   }): Promise<ActivitiesResponse> {
-    const filtersByAssetClass = filters.filter(({ type }) => {
-      return type === 'ASSET_CLASS';
-    });
-
-    if (
-      filtersByAssetClass.length > 0 &&
-      !filtersByAssetClass.find(({ id }) => {
-        return id === AssetClass.LIQUIDITY;
-      })
-    ) {
-      // If asset class filters are present and none of them is liquidity, return an empty response
+    if (this.areCashActivitiesExcludedByFilters(filters)) {
       return {
         activities: [],
         count: 0
@@ -543,41 +571,29 @@ export class ActivitiesService {
       { date: 'asc' }
     ];
 
-    const where: Prisma.OrderWhereInput = { userId };
+    const andConditions: Prisma.OrderWhereInput[] = [];
+    const where: Prisma.OrderWhereInput = { userId, AND: andConditions };
 
-    if (endDate || startDate) {
-      where.AND = [];
+    if (endDate) {
+      andConditions.push({ date: { lte: endDate } });
+    }
 
-      if (endDate) {
-        where.AND.push({ date: { lte: endDate } });
-      }
-
-      if (startDate) {
-        where.AND.push({ date: { gt: startDate } });
-      }
+    if (startDate) {
+      andConditions.push({ date: { gt: startDate } });
     }
 
     const {
-      ACCOUNT: filtersByAccount,
-      ASSET_CLASS: filtersByAssetClass,
-      TAG: filtersByTag
+      ACCOUNT: filtersByAccount = [],
+      ASSET_CLASS: filtersByAssetClass = [],
+      DATA_SOURCE: [filterByDataSource] = [],
+      SEARCH_QUERY: [filterBySearchQuery] = [],
+      SYMBOL: [filterBySymbol] = [],
+      TAG: filtersByTag = []
     } = groupBy(filters, ({ type }) => {
       return type;
     });
 
-    const filterByDataSource = filters?.find(({ type }) => {
-      return type === 'DATA_SOURCE';
-    })?.id;
-
-    const filterBySymbol = filters?.find(({ type }) => {
-      return type === 'SYMBOL';
-    })?.id;
-
-    const searchQuery = filters?.find(({ type }) => {
-      return type === 'SEARCH_QUERY';
-    })?.id;
-
-    if (filtersByAccount?.length > 0) {
+    if (filtersByAccount.length > 0) {
       where.accountId = {
         in: filtersByAccount.map(({ id }) => {
           return id;
@@ -589,7 +605,7 @@ export class ActivitiesService {
       where.isDraft = false;
     }
 
-    if (filtersByAssetClass?.length > 0) {
+    if (filtersByAssetClass.length > 0) {
       where.SymbolProfile = {
         OR: [
           {
@@ -601,14 +617,14 @@ export class ActivitiesService {
               },
               {
                 OR: [
-                  { SymbolProfileOverrides: { is: null } },
-                  { SymbolProfileOverrides: { assetClass: null } }
+                  { assetProfileOverrides: { is: null } },
+                  { assetProfileOverrides: { assetClass: null } }
                 ]
               }
             ]
           },
           {
-            SymbolProfileOverrides: {
+            assetProfileOverrides: {
               OR: filtersByAssetClass.map(({ id }) => {
                 return { assetClass: AssetClass[id] };
               })
@@ -638,8 +654,8 @@ export class ActivitiesService {
             where.SymbolProfile,
             {
               AND: [
-                { dataSource: filterByDataSource as DataSource },
-                { symbol: filterBySymbol }
+                { dataSource: filterByDataSource.id as DataSource },
+                { symbol: filterBySymbol.id }
               ]
             }
           ]
@@ -647,19 +663,19 @@ export class ActivitiesService {
       } else {
         where.SymbolProfile = {
           AND: [
-            { dataSource: filterByDataSource as DataSource },
-            { symbol: filterBySymbol }
+            { dataSource: filterByDataSource.id as DataSource },
+            { symbol: filterBySymbol.id }
           ]
         };
       }
     }
 
-    if (searchQuery) {
+    if (filterBySearchQuery) {
       const searchQueryWhereInput: Prisma.SymbolProfileWhereInput[] = [
-        { id: { mode: 'insensitive', startsWith: searchQuery } },
-        { isin: { mode: 'insensitive', startsWith: searchQuery } },
-        { name: { mode: 'insensitive', startsWith: searchQuery } },
-        { symbol: { mode: 'insensitive', startsWith: searchQuery } }
+        { id: { mode: 'insensitive', startsWith: filterBySearchQuery.id } },
+        { isin: { mode: 'insensitive', startsWith: filterBySearchQuery.id } },
+        { name: { mode: 'insensitive', startsWith: filterBySearchQuery.id } },
+        { symbol: { mode: 'insensitive', startsWith: filterBySearchQuery.id } }
       ];
 
       if (where.SymbolProfile) {
@@ -678,14 +694,31 @@ export class ActivitiesService {
       }
     }
 
-    if (filtersByTag?.length > 0) {
-      where.tags = {
-        some: {
-          OR: filtersByTag.map(({ id }) => {
-            return { id };
-          })
-        }
-      };
+    if (filtersByTag.length > 0) {
+      andConditions.push({
+        OR: [
+          {
+            tags: {
+              some: {
+                OR: filtersByTag.map(({ id }) => {
+                  return { id };
+                })
+              }
+            }
+          },
+          {
+            account: {
+              tags: {
+                some: {
+                  OR: filtersByTag.map(({ id }) => {
+                    return { tagId: id };
+                  })
+                }
+              }
+            }
+          }
+        ]
+      });
     }
 
     if (sortColumn) {
@@ -697,13 +730,9 @@ export class ActivitiesService {
     }
 
     if (withExcludedAccountsAndActivities === false) {
-      where.OR = [
-        { account: null },
-        { account: { NOT: { isExcluded: true } } }
-      ];
+      where.OR = [{ account: null }, { account: WHERE_ACCOUNT_NOT_EXCLUDED }];
 
       where.tags = {
-        ...where.tags,
         none: {
           id: TAG_ID_EXCLUDE_FROM_ANALYSIS
         }
@@ -718,7 +747,12 @@ export class ActivitiesService {
         include: {
           account: {
             include: {
-              platform: true
+              platform: true,
+              tags: {
+                include: {
+                  tag: true
+                }
+              }
             }
           },
           // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -729,6 +763,16 @@ export class ActivitiesService {
       }),
       this.prismaService.order.count({ where })
     ]);
+
+    for (const order of orders) {
+      if (order.account) {
+        order.account.tags = (
+          order.account.tags as unknown as { tag: Tag }[]
+        ).map(({ tag }) => {
+          return tag;
+        });
+      }
+    }
 
     const assetProfileIdentifiers = uniqBy(
       orders.map(({ SymbolProfile }) => {
@@ -761,10 +805,10 @@ export class ActivitiesService {
         const value = new Big(order.quantity).mul(order.unitPrice).toNumber();
 
         const [
-          feeInAssetProfileCurrency,
-          feeInBaseCurrency,
-          unitPriceInAssetProfileCurrency,
-          valueInBaseCurrency
+          feeInAssetProfileCurrency = 0,
+          feeInBaseCurrency = 0,
+          unitPriceInAssetProfileCurrency = 0,
+          valueInBaseCurrency = 0
         ] = await Promise.all([
           this.exchangeRateDataService.toCurrencyAtDate(
             order.fee,
@@ -834,7 +878,7 @@ export class ActivitiesService {
       withExcludedAccountsAndActivities: false // TODO
     });
 
-    if (withCash) {
+    if (withCash && !this.areCashActivitiesExcludedByFilters(filters)) {
       const cashDetails = await this.accountService.getCashDetails({
         filters,
         userId,

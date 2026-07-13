@@ -5,9 +5,10 @@ import {
 import { GfUserDetailDialogComponent } from '@ghostfolio/client/components/user-detail-dialog/user-detail-dialog.component';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { DEFAULT_PAGE_SIZE, locale } from '@ghostfolio/common/config';
+import { DEFAULT_LOCALE, DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
 import {
+  getCountryName,
   getDateFnsLocale,
   getDateFormatString,
   getEmojiFlag
@@ -26,6 +27,7 @@ import { GfValueComponent } from '@ghostfolio/ui/value';
 
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   computed,
@@ -66,6 +68,7 @@ import { interval } from 'rxjs';
 import { switchMap, tap } from 'rxjs/operators';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     GfPremiumIndicatorComponent,
@@ -88,6 +91,7 @@ export class GfAdminUsersComponent implements OnInit {
   >();
   protected defaultDateFormat: string;
   protected displayedColumns: string[] = [];
+  protected readonly getCountryName = getCountryName;
   protected readonly getEmojiFlag = getEmojiFlag;
   protected hasPermissionForSubscription: boolean;
   protected hasPermissionToImpersonateAllUsers: boolean;
@@ -163,6 +167,8 @@ export class GfAdminUsersComponent implements OnInit {
               this.user.permissions,
               permissions.impersonateAllUsers
             );
+
+            this.changeDetectorRef.markForCheck();
           }
         }),
         switchMap(() => this.route.paramMap)
@@ -194,6 +200,8 @@ export class GfAdminUsersComponent implements OnInit {
           pageIndex: this.paginator().pageIndex,
           showLoading: false
         });
+
+        this.changeDetectorRef.markForCheck();
       });
   }
 
@@ -206,7 +214,7 @@ export class GfAdminUsersComponent implements OnInit {
 
       return Math.abs(differenceInSeconds(parseISO(aDateString), new Date())) <
         60
-        ? 'just now'
+        ? $localize`just now`
         : distanceString;
     }
 
@@ -317,7 +325,7 @@ export class GfAdminUsersComponent implements OnInit {
         currentUserId: this.user?.id,
         deviceType: this.deviceType(),
         hasPermissionForSubscription: this.hasPermissionForSubscription,
-        locale: this.user?.settings?.locale ?? locale,
+        locale: this.user?.settings?.locale ?? DEFAULT_LOCALE,
         userId: aUserId
       } satisfies UserDetailDialogParams,
       height: this.deviceType() === 'mobile' ? '98vh' : '60vh',

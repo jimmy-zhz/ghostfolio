@@ -1,6 +1,5 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
-import { ASSET_CLASS_MAPPING } from '@ghostfolio/common/config';
-import { locale as defaultLocale } from '@ghostfolio/common/config';
+import { ASSET_CLASS_MAPPING, DEFAULT_LOCALE } from '@ghostfolio/common/config';
 import { CreateOrderDto, UpdateOrderDto } from '@ghostfolio/common/dtos';
 import { getDateFormatString } from '@ghostfolio/common/helper';
 import {
@@ -21,7 +20,7 @@ import {
   ChangeDetectorRef,
   Component,
   DestroyRef,
-  Inject
+  inject
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -76,42 +75,46 @@ import { ActivityType } from './types/activity-type.type';
   templateUrl: 'create-or-update-activity-dialog.html'
 })
 export class GfCreateOrUpdateActivityDialogComponent {
-  public activityForm: FormGroup;
+  protected activityForm: FormGroup;
 
-  public assetClassOptions: AssetClassSelectorOption[] = Object.keys(AssetClass)
-    .map((id) => {
-      return { id, label: translate(id) } as AssetClassSelectorOption;
-    })
-    .sort((a, b) => {
-      return a.label.localeCompare(b.label);
-    });
+  protected readonly assetClassOptions: AssetClassSelectorOption[] =
+    Object.keys(AssetClass)
+      .map((id) => {
+        return { id, label: translate(id) } as AssetClassSelectorOption;
+      })
+      .sort((a, b) => {
+        return a.label.localeCompare(b.label);
+      });
 
-  public assetSubClassOptions: AssetClassSelectorOption[] = [];
-  public currencies: string[] = [];
-  public currencyOfAssetProfile: string | undefined;
-  public currentMarketPrice: number | null = null;
-  public defaultDateFormat: string;
-  public defaultLookupItems: LookupItem[] = [];
-  public hasPermissionToCreateOwnTag: boolean | undefined;
-  public isLoading = false;
-  public isToday = isToday;
-  public mode: 'create' | 'update';
-  public tagsAvailable: Tag[] = [];
-  public total = 0;
-  public typesTranslationMap = new Map<Type, string>();
-  public Validators = Validators;
+  protected assetSubClassOptions: AssetClassSelectorOption[] = [];
+  protected currencies: string[] = [];
+  protected currencyOfAssetProfile: string | undefined;
+  protected currentMarketPrice: number | null = null;
+  protected defaultDateFormat: string;
+  protected defaultLookupItems: LookupItem[] = [];
+  protected hasPermissionToCreateOwnTag: boolean | undefined;
+  protected isLoading = false;
+  protected readonly isToday = isToday;
+  protected mode: 'create' | 'update';
+  protected tagsAvailable: Tag[] = [];
+  protected total = 0;
+  protected readonly typesTranslationMap = new Map<Type, string>();
+  protected readonly Validators = Validators;
 
-  public constructor(
-    private changeDetectorRef: ChangeDetectorRef,
-    @Inject(MAT_DIALOG_DATA) public data: CreateOrUpdateActivityDialogParams,
-    private dataService: DataService,
-    private dateAdapter: DateAdapter<Date, string>,
-    private destroyRef: DestroyRef,
-    public dialogRef: MatDialogRef<GfCreateOrUpdateActivityDialogComponent>,
-    private formBuilder: FormBuilder,
-    @Inject(MAT_DATE_LOCALE) private locale: string,
-    private userService: UserService
-  ) {
+  protected readonly data =
+    inject<CreateOrUpdateActivityDialogParams>(MAT_DIALOG_DATA);
+
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
+  private readonly dataService = inject(DataService);
+  private readonly dateAdapter = inject<DateAdapter<Date, string>>(DateAdapter);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly dialogRef =
+    inject<MatDialogRef<GfCreateOrUpdateActivityDialogComponent>>(MatDialogRef);
+  private readonly formBuilder = inject(FormBuilder);
+  private locale = inject<string>(MAT_DATE_LOCALE);
+  private readonly userService = inject(UserService);
+
+  public constructor() {
     addIcons({ calendarClearOutline, refreshOutline });
   }
 
@@ -120,7 +123,7 @@ export class GfCreateOrUpdateActivityDialogComponent {
     this.hasPermissionToCreateOwnTag =
       this.data.user?.settings?.isExperimentalFeatures &&
       hasPermission(this.data.user?.permissions, permissions.createOwnTag);
-    this.locale = this.data.user.settings.locale ?? defaultLocale;
+    this.locale = this.data.user.settings.locale ?? DEFAULT_LOCALE;
     this.mode = this.data.activity?.id ? 'update' : 'create';
 
     this.dateAdapter.setLocale(this.locale);
@@ -139,7 +142,9 @@ export class GfCreateOrUpdateActivityDialogComponent {
             return !['CASH'].includes(assetProfile.assetSubClass);
           })
           .sort((a, b) => {
-            return a.assetProfile.name?.localeCompare(b.assetProfile.name);
+            return (a.assetProfile.name ?? '').localeCompare(
+              b.assetProfile.name ?? ''
+            );
           })
           .map(({ assetProfile }) => {
             return {
@@ -464,14 +469,14 @@ export class GfCreateOrUpdateActivityDialogComponent {
     }
   }
 
-  public applyCurrentMarketPrice() {
+  protected applyCurrentMarketPrice() {
     this.activityForm.patchValue({
       currencyOfUnitPrice: this.activityForm.get('currency')?.value,
       unitPrice: this.currentMarketPrice
     });
   }
 
-  public dateFilter(aDate: Date) {
+  protected dateFilter(aDate: Date) {
     if (!aDate) {
       return true;
     }
@@ -479,11 +484,11 @@ export class GfCreateOrUpdateActivityDialogComponent {
     return isAfter(aDate, new Date(0));
   }
 
-  public onCancel() {
+  protected onCancel() {
     this.dialogRef.close();
   }
 
-  public async onSubmit() {
+  protected async onSubmit() {
     const activity: CreateOrderDto | UpdateOrderDto = {
       accountId: this.activityForm.get('accountId')?.value,
       assetClass: this.activityForm.get('assetClass')?.value,
@@ -531,7 +536,13 @@ export class GfCreateOrUpdateActivityDialogComponent {
 
         this.dialogRef.close(activity);
       } else {
-        (activity as UpdateOrderDto).id = this.data.activity?.id;
+        const activityId = this.data.activity?.id;
+
+        if (!activityId) {
+          throw new Error('Activity ID is required for update');
+        }
+
+        (activity as UpdateOrderDto).id = activityId;
 
         await validateObjectForForm({
           classDto: UpdateOrderDto,

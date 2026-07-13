@@ -5,15 +5,14 @@ import ms from 'ms';
 import { ColorScheme, DateRange } from './types';
 
 export const ghostfolioPrefix = 'GF';
+
+/* @deprecated */
 export const ghostfolioScraperApiSymbolPrefix = `_${ghostfolioPrefix}_`;
+
 export const ghostfolioFearAndGreedIndexDataSourceCryptocurrencies =
   DataSource.MANUAL;
-export const ghostfolioFearAndGreedIndexDataSourceStocks = DataSource.RAPID_API;
-export const ghostfolioFearAndGreedIndexSymbol = `${ghostfolioScraperApiSymbolPrefix}FEAR_AND_GREED_INDEX`;
 export const ghostfolioFearAndGreedIndexSymbolCryptocurrencies = `${ghostfolioPrefix}_FEAR_AND_GREED_INDEX_CRYPTOCURRENCIES`;
 export const ghostfolioFearAndGreedIndexSymbolStocks = `${ghostfolioPrefix}_FEAR_AND_GREED_INDEX_STOCKS`;
-
-export const locale = 'en-US';
 
 export const primaryColorHex = '#36cfcc';
 export const primaryColorRgb = {
@@ -85,12 +84,17 @@ export const DEFAULT_DATE_FORMAT_MONTH_YEAR = 'MMM yyyy';
 export const DEFAULT_DATE_RANGE: DateRange = 'max';
 export const DEFAULT_HOST = '0.0.0.0';
 export const DEFAULT_LANGUAGE_CODE = 'en';
+export const DEFAULT_LOCALE = 'en-US';
 export const DEFAULT_PAGE_SIZE = 50;
 export const DEFAULT_PORT = 3333;
 export const DEFAULT_PROCESSOR_GATHER_ASSET_PROFILE_CONCURRENCY = 1;
 export const DEFAULT_PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_CONCURRENCY = 1;
+export const DEFAULT_PROCESSOR_GATHER_HISTORICAL_MARKET_DATA_TIMEOUT =
+  ms('1 minute');
+export const DEFAULT_PROCESSOR_GATHER_STATISTICS_CONCURRENCY = 1;
 export const DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_CONCURRENCY = 1;
-export const DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT = 30000;
+export const DEFAULT_PROCESSOR_PORTFOLIO_SNAPSHOT_COMPUTATION_TIMEOUT =
+  ms('30 seconds');
 
 export const DEFAULT_REDACTED_PATHS = [
   'accounts[*].balance',
@@ -229,6 +233,7 @@ export const HEADER_KEY_SKIP_INTERCEPTOR = 'X-Skip-Interceptor';
 export const MAX_TOP_HOLDINGS = 50;
 
 export const NUMERICAL_PRECISION_THRESHOLD_3_FIGURES = 100;
+export const NUMERICAL_PRECISION_THRESHOLD_4_FIGURES = 1000;
 export const NUMERICAL_PRECISION_THRESHOLD_5_FIGURES = 10000;
 export const NUMERICAL_PRECISION_THRESHOLD_6_FIGURES = 100000;
 
@@ -256,6 +261,8 @@ export const PROPERTY_AI_RESPONSE_LANGUAGE = 'AI_RESPONSE_LANGUAGE';
 export const PROPERTY_AI_TESTED_MODELS = 'AI_TESTED_MODELS';
 export const PROPERTY_OPENROUTER_MODEL = 'OPENROUTER_MODEL';
 export const PROPERTY_OPENROUTER_MODEL_WEB_FETCH = 'OPENROUTER_MODEL_WEB_FETCH';
+export const PROPERTY_PROXY_ROUTES = 'PROXY_ROUTES';
+export const PROPERTY_REFERRAL_PARTNERS = 'REFERRAL_PARTNERS';
 export const PROPERTY_SLACK_COMMUNITY_USERS = 'SLACK_COMMUNITY_USERS';
 export const PROPERTY_STRIPE_CONFIG = 'STRIPE_CONFIG';
 export const PROPERTY_SYSTEM_MESSAGE = 'SYSTEM_MESSAGE';
@@ -310,6 +317,7 @@ export const SUPPORTED_LANGUAGE_CODES = [
   'es',
   'fr',
   'it',
+  // 'ja',
   'ko',
   'nl',
   'pl',
@@ -317,11 +325,16 @@ export const SUPPORTED_LANGUAGE_CODES = [
   'tr',
   'uk',
   'zh'
-];
+] as const;
 
 export const TAG_ID_EMERGENCY_FUND = '4452656d-9fa4-4bd0-ba38-70492e31d180';
 export const TAG_ID_EXCLUDE_FROM_ANALYSIS =
   'f2e868af-8333-459f-b161-cbc6544c24bd';
 export const TAG_ID_DEMO = 'efa08cb3-9b9d-4974-ac68-db13a19c4874';
+
+export const THROTTLE_DEFAULT_LIMIT = 10;
+export const THROTTLE_DEFAULT_TTL = ms('1 minute');
+export const THROTTLE_SIGNUP_LIMIT = 5;
+export const THROTTLE_SIGNUP_TTL = ms('1 hour');
 
 export const UNKNOWN_KEY = 'UNKNOWN';

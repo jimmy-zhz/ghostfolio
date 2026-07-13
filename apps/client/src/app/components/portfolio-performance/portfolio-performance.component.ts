@@ -13,11 +13,12 @@ import { GfValueComponent } from '@ghostfolio/ui/value';
 import {
   ChangeDetectionStrategy,
   Component,
+  effect,
   ElementRef,
-  Input,
-  OnChanges,
+  inject,
+  input,
   signal,
-  ViewChild
+  viewChild
 } from '@angular/core';
 import { IonIcon } from '@ionic/angular/standalone';
 import { CountUp } from 'countup.js';
@@ -33,28 +34,64 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
   styleUrls: ['./portfolio-performance.component.scss'],
   templateUrl: './portfolio-performance.component.html'
 })
-export class GfPortfolioPerformanceComponent implements OnChanges {
-  @Input() deviceType: string;
-  @Input() errors: ResponseError['errors'];
-  @Input() isLoading: boolean;
-  @Input() locale = getLocale();
-  @Input() performance: PortfolioPerformance;
-  @Input() precision: number;
-  @Input() showDetails: boolean;
-  @Input() unit: string;
-
-  @ViewChild('value') value: ElementRef;
+export class GfPortfolioPerformanceComponent {
+  public readonly errors = input<ResponseError['errors']>();
+  public readonly isLoading = input<boolean>();
+  public readonly locale = input<string>(getLocale());
+  public readonly performance = input.required<PortfolioPerformance>();
+  public readonly precision = input.required<number, number>({
+    transform: (value) => {
+      return value >= 0 ? value : 2;
+    }
+  });
+  public readonly showDetails = input<boolean>(false);
+  public readonly unit = input.required<string>();
 
   public showSimpleReturn = signal(false);
 
-  public constructor(private notificationService: NotificationService) {
+  private readonly value =
+    viewChild.required<ElementRef<HTMLSpanElement>>('value');
+
+  private readonly notificationService = inject(NotificationService);
+
+  public constructor() {
     addIcons({ timeOutline });
+
+    effect(() => {
+      if (this.isLoading()) {
+        if (this.value().nativeElement) {
+          this.value().nativeElement.innerHTML = '';
+        }
+      } else {
+        if (isNumber(this.performance().currentValueInBaseCurrency)) {
+          new CountUp('value', this.performance().currentValueInBaseCurrency, {
+            decimal: getNumberFormatDecimal(this.locale()),
+            decimalPlaces: this.precision(),
+            duration: 1,
+            separator: getNumberFormatGroup(this.locale())
+          }).start();
+        } else if (this.showDetails() === false) {
+          new CountUp(
+            'value',
+            this.performance().netPerformancePercentageWithCurrencyEffect * 100,
+            {
+              decimal: getNumberFormatDecimal(this.locale()),
+              decimalPlaces: 2,
+              duration: 1,
+              separator: getNumberFormatGroup(this.locale())
+            }
+          ).start();
+        } else {
+          this.value().nativeElement.innerHTML = '*****';
+        }
+      }
+    });
   }
 
   public get simpleReturnPercentage() {
-    return this.performance?.totalInvestmentValueWithCurrencyEffect
-      ? this.performance.netPerformanceWithCurrencyEffect /
-          this.performance.totalInvestmentValueWithCurrencyEffect
+    return this.performance()?.totalInvestmentValueWithCurrencyEffect
+      ? this.performance().netPerformanceWithCurrencyEffect /
+          this.performance().totalInvestmentValueWithCurrencyEffect
       : undefined;
   }
 
@@ -62,42 +99,16 @@ export class GfPortfolioPerformanceComponent implements OnChanges {
     this.showSimpleReturn.update((value) => !value);
   }
 
-  public ngOnChanges() {
-    this.precision = this.precision >= 0 ? this.precision : 2;
+  protected onShowErrors() {
+    const errors = this.errors();
 
-    if (this.isLoading) {
-      if (this.value?.nativeElement) {
-        this.value.nativeElement.innerHTML = '';
-      }
-    } else {
-      if (isNumber(this.performance?.currentValueInBaseCurrency)) {
-        new CountUp('value', this.performance?.currentValueInBaseCurrency, {
-          decimal: getNumberFormatDecimal(this.locale),
-          decimalPlaces: this.precision,
-          duration: 1,
-          separator: getNumberFormatGroup(this.locale)
-        }).start();
-      } else if (this.showDetails === false) {
-        new CountUp(
-          'value',
-          this.performance?.netPerformancePercentageWithCurrencyEffect * 100,
-          {
-            decimal: getNumberFormatDecimal(this.locale),
-            decimalPlaces: 2,
-            duration: 1,
-            separator: getNumberFormatGroup(this.locale)
-          }
-        ).start();
-      } else {
-        this.value.nativeElement.innerHTML = '*****';
-      }
+    if (!errors?.length) {
+      return;
     }
-  }
 
-  public onShowErrors() {
-    const errorMessageParts = [];
+    const errorMessageParts: string[] = [];
 
-    for (const error of this.errors) {
+    for (const error of errors) {
       errorMessageParts.push(`${error.symbol} (${error.dataSource})`);
     }
 

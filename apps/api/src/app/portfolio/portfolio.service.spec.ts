@@ -13,8 +13,12 @@ import { DataProviderService } from '@ghostfolio/api/services/data-provider/data
 import { ExchangeRateDataService } from '@ghostfolio/api/services/exchange-rate-data/exchange-rate-data.service';
 import { ImpersonationService } from '@ghostfolio/api/services/impersonation/impersonation.service';
 import { SymbolProfileService } from '@ghostfolio/api/services/symbol-profile/symbol-profile.service';
+import { UNKNOWN_KEY } from '@ghostfolio/common/config';
 import { parseDate } from '@ghostfolio/common/helper';
-import { Activity } from '@ghostfolio/common/interfaces';
+import {
+  Activity,
+  AssetProfileIdentifier
+} from '@ghostfolio/common/interfaces';
 
 import { Account, DataSource } from '@prisma/client';
 import { Big } from 'big.js';
@@ -114,6 +118,67 @@ describe('PortfolioService', () => {
     );
   });
 
+  describe('getAggregatedMarkets', () => {
+    const getAggregatedMarkets = (holdings: object) => {
+      return (
+        portfolioService as unknown as {
+          getAggregatedMarkets: (aHoldings: object) => {
+            markets: Record<
+              string,
+              { valueInBaseCurrency: number; valueInPercentage: number }
+            >;
+            marketsAdvanced: Record<string, { valueInBaseCurrency: number }>;
+          };
+        }
+      ).getAggregatedMarkets(holdings);
+    };
+
+    it('should distribute holdings with countries to their market and route holdings without countries (e.g. commodities, cryptocurrencies) to the unknown bucket', () => {
+      const holdings = {
+        'GC=F': {
+          // Gold
+          assetProfile: { countries: [] },
+          markets: { developedMarkets: 0, emergingMarkets: 0, otherMarkets: 0 },
+          marketsAdvanced: {
+            asiaPacific: 0,
+            emergingMarkets: 0,
+            europe: 0,
+            japan: 0,
+            northAmerica: 0,
+            otherMarkets: 0
+          },
+          valueInBaseCurrency: 500
+        },
+        MSFT: {
+          assetProfile: { countries: [{ code: 'US', weight: 1 }] },
+          markets: { developedMarkets: 1, emergingMarkets: 0, otherMarkets: 0 },
+          marketsAdvanced: {
+            asiaPacific: 0,
+            emergingMarkets: 0,
+            europe: 0,
+            japan: 0,
+            northAmerica: 1,
+            otherMarkets: 0
+          },
+          valueInBaseCurrency: 1000
+        }
+      };
+
+      const { markets, marketsAdvanced } = getAggregatedMarkets(holdings);
+
+      expect(markets.developedMarkets.valueInBaseCurrency).toBe(1000);
+      expect(markets[UNKNOWN_KEY].valueInBaseCurrency).toBe(500);
+
+      expect(markets.developedMarkets.valueInPercentage).toBeCloseTo(
+        1000 / 1500
+      );
+      expect(markets[UNKNOWN_KEY].valueInPercentage).toBeCloseTo(500 / 1500);
+
+      expect(marketsAdvanced.northAmerica.valueInBaseCurrency).toBe(1000);
+      expect(marketsAdvanced[UNKNOWN_KEY].valueInBaseCurrency).toBe(500);
+    });
+  });
+
   describe('getCashSymbolProfiles', () => {
     it('should use the exchange-rate data source so the symbol-profile join in getDetails matches the calculator positions', () => {
       jest
@@ -142,7 +207,7 @@ describe('PortfolioService', () => {
         portfolioService as unknown as {
           getCashSymbolProfiles: (
             aCashDetails: CashDetails
-          ) => { dataSource: DataSource; symbol: string }[];
+          ) => AssetProfileIdentifier[];
         }
       ).getCashSymbolProfiles(cashDetails);
 
@@ -279,6 +344,102 @@ describe('PortfolioService', () => {
   });
 
   describe('getValueOfAccountsAndPlatforms', () => {
+    const getValueOfAccountsAndPlatforms = (args: object) => {
+      return (
+        portfolioService as unknown as {
+          getValueOfAccountsAndPlatforms: (aArgs: object) => Promise<{
+            accounts: Record<
+              string,
+              {
+                investmentInBaseCurrency: number;
+                valueInBaseCurrency: number;
+              }
+            >;
+            platforms: Record<string, { valueInBaseCurrency: number }>;
+          }>;
+        }
+      ).getValueOfAccountsAndPlatforms(args);
+    };
+
+    const account = {
+      balance: 100,
+      currency: 'USD',
+      id: randomUUID(),
+      isExcluded: false,
+      name: 'Account 1',
+      platform: { name: 'Platform 1' },
+      platformId: randomUUID()
+    };
+
+    beforeEach(() => {
+      jest
+        .spyOn(accountService, 'getAccounts')
+        .mockResolvedValue([account] as unknown as Account[]);
+
+      jest
+        .spyOn(exchangeRateDataService, 'toCurrency')
+        .mockImplementation((aValue) => aValue);
+    });
+
+    it('should group activities without an account into the unknown bucket of accounts and platforms', async () => {
+      const { accounts, platforms } = await getValueOfAccountsAndPlatforms({
+        activities: [
+          {
+            account,
+            accountId: account.id,
+            quantity: 1,
+            SymbolProfile: { symbol: 'AAPL' },
+            type: 'BUY'
+          },
+          {
+            account: null,
+            accountId: null,
+            quantity: 2,
+            SymbolProfile: { symbol: 'BABA' },
+            type: 'BUY'
+          }
+        ],
+        filters: [],
+        portfolioItemsNow: {
+          AAPL: { marketPriceInBaseCurrency: 10 },
+          BABA: { marketPriceInBaseCurrency: 20 }
+        },
+        userCurrency: 'USD',
+        userId: userDummyData.id
+      });
+
+      // 100 (balance) + 1 * 10 (activity)
+      expect(accounts[account.id].valueInBaseCurrency).toBe(110);
+      expect(platforms[account.platformId].valueInBaseCurrency).toBe(110);
+
+      // 2 * 20 (activity without an account)
+      expect(accounts[UNKNOWN_KEY].valueInBaseCurrency).toBe(40);
+      expect(platforms[UNKNOWN_KEY].valueInBaseCurrency).toBe(40);
+    });
+
+    it('should not create an unknown bucket when every activity has an account', async () => {
+      const { accounts, platforms } = await getValueOfAccountsAndPlatforms({
+        activities: [
+          {
+            account,
+            accountId: account.id,
+            quantity: 1,
+            SymbolProfile: { symbol: 'AAPL' },
+            type: 'BUY'
+          }
+        ],
+        filters: [],
+        portfolioItemsNow: {
+          AAPL: { marketPriceInBaseCurrency: 10 }
+        },
+        userCurrency: 'USD',
+        userId: userDummyData.id
+      });
+
+      expect(accounts[UNKNOWN_KEY]).toBeUndefined();
+      expect(platforms[UNKNOWN_KEY]).toBeUndefined();
+    });
+
     it('should reduce investment by the cost basis (not the sale proceeds) when a position is fully sold or transferred out', async () => {
       const diAccount = {
         balance: 0,

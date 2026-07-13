@@ -1,7 +1,6 @@
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { HasPermissionGuard } from '@ghostfolio/api/guards/has-permission.guard';
 import { TransformDataSourceInRequestInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-request/transform-data-source-in-request.interceptor';
-import { ApiService } from '@ghostfolio/api/services/api/api.service';
 import { BenchmarkService } from '@ghostfolio/api/services/benchmark/benchmark.service';
 import { ManualService } from '@ghostfolio/api/services/data-provider/manual/manual.service';
 import { DemoService } from '@ghostfolio/api/services/demo/demo.service';
@@ -24,7 +23,6 @@ import {
 } from '@ghostfolio/common/helper';
 import {
   AdminData,
-  AdminMarketData,
   AdminUserResponse,
   AdminUsersResponse,
   EnhancedSymbolProfile,
@@ -33,7 +31,7 @@ import {
 import { permissions } from '@ghostfolio/common/permissions';
 import type {
   DateRange,
-  MarketDataPreset,
+  PropertyKey,
   RequestWithUser
 } from '@ghostfolio/common/types';
 
@@ -46,6 +44,7 @@ import {
   Inject,
   Logger,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Put,
@@ -60,6 +59,7 @@ import { isDate, parseISO } from 'date-fns';
 import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 
 import { AdminService } from './admin.service';
+import { PropertyKeyPipe } from './pipes/property-key.pipe';
 
 @Controller('admin')
 export class AdminController {
@@ -67,7 +67,6 @@ export class AdminController {
 
   public constructor(
     private readonly adminService: AdminService,
-    private readonly apiService: ApiService,
     private readonly benchmarkService: BenchmarkService,
     private readonly dataGatheringService: DataGatheringService,
     private readonly demoService: DemoService,
@@ -93,8 +92,8 @@ export class AdminController {
   @HasPermission(permissions.accessAdminControl)
   @Post('gather')
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
-  public async gather7Days(): Promise<void> {
-    this.dataGatheringService.gather7Days();
+  public async gatherRecentMarketData(): Promise<void> {
+    this.dataGatheringService.gatherRecentMarketData();
   }
 
   @HasPermission(permissions.accessAdminControl)
@@ -218,35 +217,6 @@ export class AdminController {
     });
   }
 
-  @Get('market-data')
-  @HasPermission(permissions.accessAdminControl)
-  @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
-  public async getMarketData(
-    @Query('assetSubClasses') filterByAssetSubClasses?: string,
-    @Query('dataSource') filterByDataSource?: string,
-    @Query('presetId') presetId?: MarketDataPreset,
-    @Query('query') filterBySearchQuery?: string,
-    @Query('skip') skip?: number,
-    @Query('sortColumn') sortColumn?: string,
-    @Query('sortDirection') sortDirection?: Prisma.SortOrder,
-    @Query('take') take?: number
-  ): Promise<AdminMarketData> {
-    const filters = this.apiService.buildFiltersFromQueryParams({
-      filterByAssetSubClasses,
-      filterByDataSource,
-      filterBySearchQuery
-    });
-
-    return this.adminService.getMarketData({
-      filters,
-      presetId,
-      sortColumn,
-      sortDirection,
-      skip: isNaN(skip) ? undefined : skip,
-      take: isNaN(take) ? undefined : take
-    });
-  }
-
   @HasPermission(permissions.accessAdminControl)
   @Post('market-data/:dataSource/:symbol/test')
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
@@ -345,7 +315,7 @@ export class AdminController {
   @Put('settings/:key')
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   public async updateProperty(
-    @Param('key') key: string,
+    @Param('key', PropertyKeyPipe) key: PropertyKey,
     @Body() data: UpdatePropertyDto
   ) {
     return this.adminService.putSetting(key, data.value);
@@ -355,12 +325,12 @@ export class AdminController {
   @HasPermission(permissions.accessAdminControl)
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   public async getUsers(
-    @Query('skip') skip?: number,
-    @Query('take') take?: number
+    @Query('skip', new ParseIntPipe({ optional: true })) skip?: number,
+    @Query('take', new ParseIntPipe({ optional: true })) take?: number
   ): Promise<AdminUsersResponse> {
     return this.adminService.getUsers({
-      skip: isNaN(skip) ? undefined : skip,
-      take: isNaN(take) ? undefined : take
+      skip,
+      take
     });
   }
 

@@ -1,7 +1,8 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
+import { DEFAULT_PAGE_SIZE } from '@ghostfolio/common/config';
 import { CreateTagDto, UpdateTagDto } from '@ghostfolio/common/dtos';
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
-import { getLocale } from '@ghostfolio/common/helper';
+import { getLocale, getLowercase } from '@ghostfolio/common/helper';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { DataService } from '@ghostfolio/ui/services';
 import { GfValueComponent } from '@ghostfolio/ui/value';
@@ -21,6 +22,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -32,7 +34,6 @@ import {
   ellipsisHorizontal,
   trashOutline
 } from 'ionicons/icons';
-import { get } from 'lodash';
 import { DeviceDetectorService } from 'ngx-device-detector';
 
 import { GfCreateOrUpdateTagDialogComponent } from './create-or-update-tag-dialog/create-or-update-tag-dialog.component';
@@ -45,6 +46,7 @@ import { CreateOrUpdateTagDialogParams } from './create-or-update-tag-dialog/int
     IonIcon,
     MatButtonModule,
     MatMenuModule,
+    MatPaginatorModule,
     MatSortModule,
     MatTableModule,
     RouterModule
@@ -60,14 +62,17 @@ export class GfAdminTagComponent implements OnInit {
   protected readonly displayedColumns = [
     'name',
     'userId',
+    'accounts',
     'activities',
     'actions'
   ];
+  protected readonly pageSize = DEFAULT_PAGE_SIZE;
   protected tags: Tag[];
 
   private readonly deviceType = computed(
     () => this.deviceDetectorService.deviceInfo().deviceType
   );
+  private readonly paginator = viewChild.required(MatPaginator);
   private readonly sort = viewChild.required(MatSort);
 
   private readonly changeDetectorRef = inject(ChangeDetectorRef);
@@ -148,8 +153,9 @@ export class GfAdminTagComponent implements OnInit {
         this.tags = tags;
 
         this.dataSource = new MatTableDataSource(this.tags);
+        this.dataSource.paginator = this.paginator();
         this.dataSource.sort = this.sort();
-        this.dataSource.sortingDataAccessor = get;
+        this.dataSource.sortingDataAccessor = getLowercase;
 
         this.dataService.updateInfo();
 

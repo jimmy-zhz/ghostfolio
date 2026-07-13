@@ -8,11 +8,11 @@ import { GfValueComponent } from '@ghostfolio/ui/value';
 import {
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
+  inject,
   Input,
   OnChanges,
   OnDestroy,
-  Output,
+  output,
   signal
 } from '@angular/core';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -49,46 +49,20 @@ export class GfPortfolioSummaryComponent implements OnChanges, OnDestroy {
   @Input() summary: PortfolioSummary;
   @Input() user: User;
 
-  @Output() emergencyFundChanged = new EventEmitter<number>();
+  public emergencyFundChanged = output<number>();
 
-  public buyAndSellActivitiesTooltip = translate(
+  protected readonly buyAndSellActivitiesTooltip = translate(
     'BUY_AND_SELL_ACTIVITIES_TOOLTIP'
   );
 
-  public precision = 2;
-  public showSimpleReturn = signal(false);
-  public timeInMarket: string;
+  protected precision = 2;
+  protected showSimpleReturn = signal(false);
+  protected timeInMarket: string | undefined;
 
+  private readonly notificationService = inject(NotificationService);
   private simpleReturnToggleIntervalId: ReturnType<typeof setInterval>;
 
-  public get buyingPowerPercentage() {
-    return this.summary?.totalValueInBaseCurrency
-      ? this.summary.cash / this.summary.totalValueInBaseCurrency
-      : 0;
-  }
-
-  public get emergencyFundPercentage() {
-    return this.summary?.totalValueInBaseCurrency
-      ? (this.summary.emergencyFund?.total || 0) /
-          this.summary.totalValueInBaseCurrency
-      : 0;
-  }
-
-  public get excludedFromAnalysisPercentage() {
-    return this.summary?.totalValueInBaseCurrency
-      ? this.summary.excludedAccountsAndActivities /
-          this.summary.totalValueInBaseCurrency
-      : 0;
-  }
-
-  public get simpleReturnPercentage() {
-    return this.summary?.totalInvestmentValueWithCurrencyEffect
-      ? this.summary.netPerformanceWithCurrencyEffect /
-          this.summary.totalInvestmentValueWithCurrencyEffect
-      : undefined;
-  }
-
-  public constructor(private notificationService: NotificationService) {
+  public constructor() {
     addIcons({ ellipsisHorizontalCircleOutline, informationCircleOutline });
 
     this.simpleReturnToggleIntervalId = setInterval(() => {
@@ -100,11 +74,38 @@ export class GfPortfolioSummaryComponent implements OnChanges, OnDestroy {
     clearInterval(this.simpleReturnToggleIntervalId);
   }
 
+  protected get buyingPowerPercentage() {
+    return this.summary?.totalValueInBaseCurrency
+      ? this.summary.cash / this.summary.totalValueInBaseCurrency
+      : 0;
+  }
+
+  protected get emergencyFundPercentage() {
+    return this.summary?.totalValueInBaseCurrency
+      ? (this.summary.emergencyFund?.total || 0) /
+          this.summary.totalValueInBaseCurrency
+      : 0;
+  }
+
+  protected get excludedFromAnalysisPercentage() {
+    return this.summary?.totalValueInBaseCurrency
+      ? this.summary.excludedAccountsAndActivities /
+          this.summary.totalValueInBaseCurrency
+      : 0;
+  }
+
+  protected get simpleReturnPercentage() {
+    return this.summary?.totalInvestmentValueWithCurrencyEffect
+      ? this.summary.netPerformanceWithCurrencyEffect /
+          this.summary.totalInvestmentValueWithCurrencyEffect
+      : undefined;
+  }
+
   public ngOnChanges() {
     if (this.summary) {
       if (
         this.deviceType === 'mobile' &&
-        this.summary.totalValueInBaseCurrency >=
+        (this.summary.totalValueInBaseCurrency ?? 0) >=
           NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
       ) {
         this.precision = 0;
@@ -125,7 +126,7 @@ export class GfPortfolioSummaryComponent implements OnChanges, OnDestroy {
     }
   }
 
-  public onEditEmergencyFund() {
+  protected onEditEmergencyFund() {
     this.notificationService.prompt({
       confirmFn: (value) => {
         const emergencyFund = parseFloat(value.trim()) || 0;

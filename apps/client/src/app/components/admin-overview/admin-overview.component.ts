@@ -27,6 +27,7 @@ import { GfValueComponent } from '@ghostfolio/ui/value';
 import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { CommonModule } from '@angular/common';
 import {
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   DestroyRef,
@@ -64,6 +65,7 @@ import {
 import ms, { StringValue } from 'ms';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ClipboardModule,
     CommonModule,
@@ -88,7 +90,12 @@ export class GfAdminOverviewComponent implements OnInit {
   protected activitiesCount: number;
   protected couponDuration: StringValue = '14 days';
   protected readonly couponsDataSource = new MatTableDataSource<Coupon>();
-  protected readonly couponsDisplayedColumns = ['code', 'duration', 'actions'];
+  protected readonly couponsDisplayedColumns = [
+    'code',
+    'duration',
+    'createdAt',
+    'actions'
+  ];
   protected hasPermissionForSubscription: boolean;
   protected hasPermissionForSystemMessage: boolean;
   protected hasPermissionToSyncDemoUserAccount: boolean;
@@ -140,6 +147,8 @@ export class GfAdminOverviewComponent implements OnInit {
             permissions.toggleReadOnlyMode
           );
         }
+
+        this.changeDetectorRef.markForCheck();
       });
 
     addIcons({
@@ -197,6 +206,7 @@ export class GfAdminOverviewComponent implements OnInit {
   protected onAddCoupon() {
     const newCoupon: Coupon = {
       code: `${ghostfolioPrefix}${this.generateCouponCode(14)}`,
+      createdAt: new Date().toISOString(),
       duration: this.couponDuration
     };
 

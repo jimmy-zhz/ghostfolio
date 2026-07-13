@@ -6,7 +6,12 @@ import {
   TabConfiguration
 } from '@ghostfolio/ui/page-tabs';
 
-import { ChangeDetectorRef, Component, DestroyRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  DestroyRef
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { addIcons } from 'ionicons';
 import {
@@ -19,6 +24,7 @@ import {
 } from 'ionicons/icons';
 
 @Component({
+  changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'page' },
   imports: [GfPageTabsComponent],
   selector: 'gf-portfolio-page',
@@ -74,9 +80,9 @@ export class PortfolioPageComponent {
             }
           ];
           this.user = state.user;
-
-          this.changeDetectorRef.markForCheck();
         }
+
+        this.changeDetectorRef.markForCheck();
       });
 
     addIcons({

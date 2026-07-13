@@ -28,6 +28,8 @@ import {
   AiPromptResponse,
   ApiKeyResponse,
   AssetProfileIdentifier,
+  AssetProfileResponse,
+  AssetProfilesResponse,
   AssetResponse,
   BenchmarkMarketDataDetailsResponse,
   BenchmarkResponse,
@@ -39,7 +41,6 @@ import {
   ImportResponse,
   InfoItem,
   LookupResponse,
-  MarketDataDetailsResponse,
   MarketDataOfMarketsResponse,
   OAuthResponse,
   PlatformsResponse,
@@ -95,17 +96,17 @@ export class DataService {
 
     if (filters && filters.length > 0) {
       const {
-        ACCOUNT: filtersByAccount,
-        ASSET_CLASS: filtersByAssetClass,
-        ASSET_SUB_CLASS: filtersByAssetSubClass,
+        ACCOUNT: filtersByAccount = [],
+        ASSET_CLASS: filtersByAssetClass = [],
+        ASSET_SUB_CLASS: filtersByAssetSubClass = [],
         DATA_SOURCE: [filterByDataSource] = [],
-        HOLDING_TYPE: filtersByHoldingType,
-        PRESET_ID: filtersByPresetId,
-        SEARCH_QUERY: filtersBySearchQuery,
+        HOLDING_TYPE: [filterByHoldingType] = [],
+        PRESET_ID: [filterByPresetId] = [],
+        SEARCH_QUERY: [filterBySearchQuery] = [],
         SYMBOL: [filterBySymbol] = [],
-        TAG: filtersByTag
-      } = groupBy(filters, (filter) => {
-        return filter.type;
+        TAG: filtersByTag = []
+      } = groupBy(filters, ({ type }) => {
+        return type;
       });
 
       if (filterByDataSource) {
@@ -116,7 +117,7 @@ export class DataService {
         params = params.append('symbol', filterBySymbol.id);
       }
 
-      if (filtersByAccount) {
+      if (filtersByAccount.length > 0) {
         params = params.append(
           'accounts',
           filtersByAccount
@@ -127,7 +128,7 @@ export class DataService {
         );
       }
 
-      if (filtersByAssetClass) {
+      if (filtersByAssetClass.length > 0) {
         params = params.append(
           'assetClasses',
           filtersByAssetClass
@@ -138,7 +139,7 @@ export class DataService {
         );
       }
 
-      if (filtersByAssetSubClass) {
+      if (filtersByAssetSubClass.length > 0) {
         params = params.append(
           'assetSubClasses',
           filtersByAssetSubClass
@@ -149,19 +150,19 @@ export class DataService {
         );
       }
 
-      if (filtersByHoldingType) {
-        params = params.append('holdingType', filtersByHoldingType[0].id);
+      if (filterByHoldingType) {
+        params = params.append('holdingType', filterByHoldingType.id);
       }
 
-      if (filtersByPresetId) {
-        params = params.append('presetId', filtersByPresetId[0].id);
+      if (filterByPresetId) {
+        params = params.append('presetId', filterByPresetId.id);
       }
 
-      if (filtersBySearchQuery) {
-        params = params.append('query', filtersBySearchQuery[0].id);
+      if (filterBySearchQuery) {
+        params = params.append('query', filterBySearchQuery.id);
       }
 
-      if (filtersByTag) {
+      if (filtersByTag.length > 0) {
         params = params.append(
           'tags',
           filtersByTag
@@ -318,7 +319,7 @@ export class DataService {
 
   public fetchDividendsImport({ dataSource, symbol }: AssetProfileIdentifier) {
     return this.http.get<ImportResponse>(
-      `/api/v1/import/dividends/${dataSource}/${symbol}`
+      `/api/v1/import/dividends/${dataSource}/${encodeURIComponent(symbol)}`
     );
   }
 
@@ -330,7 +331,7 @@ export class DataService {
     symbol: string;
   }) {
     return this.http.get<DataProviderHistoricalResponse>(
-      `/api/v1/exchange-rate/${symbol}/${format(date, DATE_FORMAT, { in: utc })}`
+      `/api/v1/exchange-rate/${encodeURIComponent(symbol)}/${format(date, DATE_FORMAT, { in: utc })}`
     );
   }
 
@@ -358,7 +359,7 @@ export class DataService {
 
   public deleteBenchmark({ dataSource, symbol }: AssetProfileIdentifier) {
     return this.http.delete<Partial<SymbolProfile>>(
-      `/api/v1/benchmarks/${dataSource}/${symbol}`
+      `/api/v1/benchmarks/${dataSource}/${encodeURIComponent(symbol)}`
     );
   }
 
@@ -375,7 +376,9 @@ export class DataService {
   }
 
   public deleteWatchlistItem({ dataSource, symbol }: AssetProfileIdentifier) {
-    return this.http.delete<void>(`/api/v1/watchlist/${dataSource}/${symbol}`);
+    return this.http.delete<void>(
+      `/api/v1/watchlist/${dataSource}/${encodeURIComponent(symbol)}`
+    );
   }
 
   public fetchAccesses() {
@@ -386,14 +389,52 @@ export class DataService {
     dataSource,
     symbol
   }: AssetProfileIdentifier): Observable<AssetResponse> {
-    return this.http.get<any>(`/api/v1/asset/${dataSource}/${symbol}`).pipe(
-      map((data) => {
-        for (const item of data.marketData) {
-          item.date = parseISO(item.date);
-        }
-        return data;
-      })
-    );
+    return this.http
+      .get<any>(`/api/v1/asset/${dataSource}/${encodeURIComponent(symbol)}`)
+      .pipe(
+        map((data) => {
+          for (const item of data.marketData) {
+            item.date = parseISO(item.date);
+          }
+          return data;
+        })
+      );
+  }
+
+  public fetchAssetProfiles({
+    filters,
+    skip,
+    sortColumn,
+    sortDirection,
+    take
+  }: {
+    filters?: Filter[];
+    skip?: number;
+    sortColumn?: string;
+    sortDirection?: SortDirection;
+    take: number;
+  }) {
+    let params = this.buildFiltersAsQueryParams({ filters });
+
+    if (skip) {
+      params = params.append('skip', skip);
+    }
+
+    if (sortColumn) {
+      params = params.append('sortColumn', sortColumn);
+    }
+
+    if (sortDirection) {
+      params = params.append('sortDirection', sortDirection);
+    }
+
+    if (take) {
+      params = params.append('take', take);
+    }
+
+    return this.http.get<AssetProfilesResponse>('/api/v1/asset-profiles', {
+      params
+    });
   }
 
   public fetchBenchmarkForUser({
@@ -418,7 +459,7 @@ export class DataService {
     }
 
     return this.http.get<BenchmarkMarketDataDetailsResponse>(
-      `/api/v1/benchmarks/${dataSource}/${symbol}/${format(startDate, DATE_FORMAT, { in: utc })}`,
+      `/api/v1/benchmarks/${dataSource}/${encodeURIComponent(symbol)}/${format(startDate, DATE_FORMAT, { in: utc })}`,
       { params }
     );
   }
@@ -460,13 +501,27 @@ export class DataService {
   public fetchHoldingDetail({
     dataSource,
     symbol
-  }: {
-    dataSource: DataSource;
-    symbol: string;
-  }) {
-    return this.http.get<PortfolioHoldingResponse>(
-      `/api/v1/portfolio/holding/${dataSource}/${symbol}`
-    );
+  }: AssetProfileIdentifier): Observable<
+    Omit<PortfolioHoldingResponse, 'dateOfFirstActivity'> & {
+      dateOfFirstActivity: Date | undefined;
+    }
+  > {
+    return this.http
+      .get<PortfolioHoldingResponse>(
+        `/api/v1/portfolio/holding/${dataSource}/${encodeURIComponent(symbol)}`
+      )
+      .pipe(
+        map((response) => {
+          const dateOfFirstActivity = response.dateOfFirstActivity
+            ? parseISO(response.dateOfFirstActivity)
+            : undefined;
+
+          return {
+            ...response,
+            dateOfFirstActivity
+          };
+        })
+      );
   }
 
   public fetchInfo(): InfoItem {
@@ -505,17 +560,17 @@ export class DataService {
   public fetchMarketDataBySymbol({
     dataSource,
     symbol
-  }: {
-    dataSource: DataSource;
-    symbol: string;
-  }): Observable<MarketDataDetailsResponse> {
+  }: AssetProfileIdentifier): Observable<AssetProfileResponse> {
     return this.http
-      .get<any>(`/api/v1/market-data/${dataSource}/${symbol}`)
+      .get<any>(
+        `/api/v1/asset-profiles/${dataSource}/${encodeURIComponent(symbol)}`
+      )
       .pipe(
         map((data) => {
           for (const item of data.marketData) {
             item.date = parseISO(item.date);
           }
+
           return data;
         })
       );
@@ -753,9 +808,12 @@ export class DataService {
       params = params.append('includeHistoricalData', includeHistoricalData);
     }
 
-    return this.http.get<SymbolItem>(`/api/v1/symbol/${dataSource}/${symbol}`, {
-      params
-    });
+    return this.http.get<SymbolItem>(
+      `/api/v1/symbol/${dataSource}/${encodeURIComponent(symbol)}`,
+      {
+        params
+      }
+    );
   }
 
   public fetchSymbols({
@@ -825,12 +883,8 @@ export class DataService {
     dataSource,
     marketData,
     symbol
-  }: {
-    dataSource: DataSource;
-    marketData: UpdateBulkMarketDataDto;
-    symbol: string;
-  }) {
-    const url = `/api/v1/market-data/${dataSource}/${symbol}`;
+  }: { marketData: UpdateBulkMarketDataDto } & AssetProfileIdentifier) {
+    const url = `/api/v1/market-data/${dataSource}/${encodeURIComponent(symbol)}`;
 
     return this.http.post<MarketData>(url, marketData);
   }
@@ -947,7 +1001,7 @@ export class DataService {
     tags
   }: { tags: Tag[] } & AssetProfileIdentifier) {
     return this.http.put<void>(
-      `/api/v1/portfolio/holding/${dataSource}/${symbol}/tags`,
+      `/api/v1/portfolio/holding/${dataSource}/${encodeURIComponent(symbol)}/tags`,
       { tags }
     );
   }

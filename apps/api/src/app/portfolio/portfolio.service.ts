@@ -42,11 +42,13 @@ import {
   DATE_FORMAT,
   getAssetProfileIdentifier,
   getSum,
+  isAccountExcluded,
   parseDate
 } from '@ghostfolio/common/helper';
 import {
   AccountsResponse,
   Activity,
+  AssetProfileIdentifier,
   EnhancedSymbolProfile,
   Filter,
   HistoricalDataItem,
@@ -95,6 +97,7 @@ import {
   parseISO,
   set
 } from 'date-fns';
+import { groupBy } from 'lodash';
 
 import { PortfolioCalculator } from './calculator/portfolio-calculator';
 import { PortfolioCalculatorFactory } from './calculator/portfolio-calculator.factory';
@@ -139,20 +142,16 @@ export class PortfolioService {
   }): Promise<AccountWithValue[]> {
     const where: Prisma.AccountWhereInput = { userId };
 
-    const filterByAccount = filters?.find(({ type }) => {
-      return type === 'ACCOUNT';
-    })?.id;
-
-    const filterByDataSource = filters?.find(({ type }) => {
-      return type === 'DATA_SOURCE';
-    })?.id;
-
-    const filterBySymbol = filters?.find(({ type }) => {
-      return type === 'SYMBOL';
-    })?.id;
+    const {
+      ACCOUNT: [filterByAccount] = [],
+      DATA_SOURCE: [filterByDataSource] = [],
+      SYMBOL: [filterBySymbol] = []
+    } = groupBy(filters, ({ type }) => {
+      return type;
+    });
 
     if (filterByAccount) {
-      where.id = filterByAccount;
+      where.id = filterByAccount.id;
     }
 
     if (filterByDataSource && filterBySymbol) {
@@ -160,8 +159,8 @@ export class PortfolioService {
         some: {
           SymbolProfile: {
             AND: [
-              { dataSource: filterByDataSource as DataSource },
-              { symbol: filterBySymbol }
+              { dataSource: filterByDataSource.id as DataSource },
+              { symbol: filterBySymbol.id }
             ]
           }
         }
@@ -173,7 +172,8 @@ export class PortfolioService {
         where,
         include: {
           activities: { include: { SymbolProfile: true } },
-          platform: true
+          platform: true,
+          tags: true
         },
         orderBy: { name: 'asc' }
       }),
@@ -206,21 +206,21 @@ export class PortfolioService {
           switch (type) {
             case ActivityType.DIVIDEND:
               dividendInBaseCurrency +=
-                await this.exchangeRateDataService.toCurrencyAtDate(
+                (await this.exchangeRateDataService.toCurrencyAtDate(
                   new Big(quantity).mul(unitPrice).toNumber(),
                   currency ?? SymbolProfile.currency,
                   userCurrency,
                   date
-                );
+                )) ?? 0;
               break;
             case ActivityType.INTEREST:
               interestInBaseCurrency +=
-                await this.exchangeRateDataService.toCurrencyAtDate(
+                (await this.exchangeRateDataService.toCurrencyAtDate(
                   unitPrice,
                   currency ?? SymbolProfile.currency,
                   userCurrency,
                   date
-                );
+                )) ?? 0;
               break;
           }
 
@@ -283,17 +283,20 @@ export class PortfolioService {
 
     let activitiesCount = 0;
 
-    const searchQuery = filters.find(({ type }) => {
-      return type === 'SEARCH_QUERY';
-    })?.id;
+    const { SEARCH_QUERY: [filterBySearchQuery] = [] } = groupBy(
+      filters,
+      ({ type }) => {
+        return type;
+      }
+    );
 
-    if (searchQuery) {
+    if (filterBySearchQuery) {
       const fuse = new Fuse(accounts, {
         keys: ['name', 'platform.name'],
         threshold: 0.3
       });
 
-      accounts = fuse.search(searchQuery).map(({ item }) => {
+      accounts = fuse.search(filterBySearchQuery.id).map(({ item }) => {
         return item;
       });
     }
@@ -390,17 +393,20 @@ export class PortfolioService {
 
     let holdings = Object.values(holdingsMap);
 
-    const searchQuery = filters.find(({ type }) => {
-      return type === 'SEARCH_QUERY';
-    })?.id;
+    const { SEARCH_QUERY: [filterBySearchQuery] = [] } = groupBy(
+      filters,
+      ({ type }) => {
+        return type;
+      }
+    );
 
-    if (searchQuery) {
+    if (filterBySearchQuery) {
       const fuse = new Fuse(holdings, {
         keys: ['isin', 'name', 'symbol'],
         threshold: 0.3
       });
 
-      holdings = fuse.search(searchQuery).map(({ item }) => {
+      holdings = fuse.search(filterBySearchQuery.id).map(({ item }) => {
         return item;
       });
     }
@@ -539,30 +545,18 @@ export class PortfolioService {
 
     const holdings: PortfolioDetails['holdings'] = {};
 
-    const totalValueInBaseCurrency = currentValueInBaseCurrency.plus(
-      cashDetails.balanceInBaseCurrency
-    );
+    const {
+      HOLDING_TYPE: [filterByHoldingType] = [],
+      TAG: [filterByTag] = []
+    } = groupBy(filters, ({ type }) => {
+      return type;
+    });
 
-    const isFilteredByAccount =
-      filters?.some(({ type }) => {
-        return type === 'ACCOUNT';
-      }) ?? false;
+    const isFilteredByClosedHoldings = filterByHoldingType?.id === 'CLOSED';
 
-    const isFilteredByClosedHoldings =
-      filters?.some(({ id, type }) => {
-        return id === 'CLOSED' && type === 'HOLDING_TYPE';
-      }) ?? false;
+    let filteredValueInBaseCurrency = currentValueInBaseCurrency;
 
-    let filteredValueInBaseCurrency = isFilteredByAccount
-      ? totalValueInBaseCurrency
-      : currentValueInBaseCurrency;
-
-    if (
-      filters?.length === 0 ||
-      (filters?.length === 1 &&
-        filters[0].id === AssetClass.LIQUIDITY &&
-        filters[0].type === 'ASSET_CLASS')
-    ) {
+    if (!this.activitiesService.areCashActivitiesExcludedByFilters(filters)) {
       filteredValueInBaseCurrency = filteredValueInBaseCurrency.plus(
         cashDetails.balanceInBaseCurrency
       );
@@ -714,11 +708,7 @@ export class PortfolioService {
       withExcludedAccounts
     });
 
-    if (
-      filters?.length === 1 &&
-      filters[0].id === TAG_ID_EMERGENCY_FUND &&
-      filters[0].type === 'TAG'
-    ) {
+    if (filters?.length === 1 && filterByTag?.id === TAG_ID_EMERGENCY_FUND) {
       const emergencyFundCashPositions = this.getCashPositions({
         cashDetails,
         userCurrency,
@@ -792,11 +782,9 @@ export class PortfolioService {
     symbol,
     userId
   }: {
-    dataSource: DataSource;
-    impersonationId: string;
-    symbol: string;
+    impersonationId?: string;
     userId: string;
-  }): Promise<PortfolioHoldingResponse> {
+  } & AssetProfileIdentifier): Promise<PortfolioHoldingResponse> {
     userId = await this.getUserId(impersonationId, userId);
     const user = await this.userService.user({ id: userId });
     const userCurrency = this.getUserCurrency(user);
@@ -906,10 +894,13 @@ export class PortfolioService {
       marketPrice
     );
 
-    if (historicalData[symbol]) {
+    const historicalDataItems =
+      historicalData[getAssetProfileIdentifier({ dataSource, symbol })];
+
+    if (historicalDataItems) {
       let j = -1;
       for (const [date, { marketPrice }] of Object.entries(
-        historicalData[symbol]
+        historicalDataItems
       )) {
         while (
           j + 1 < transactionPoints.length &&
@@ -971,8 +962,19 @@ export class PortfolioService {
       marketPrice,
       marketPriceMax,
       marketPriceMin,
-      SymbolProfile,
       tags,
+      assetProfile: {
+        assetClass: SymbolProfile.assetClass,
+        assetSubClass: SymbolProfile.assetSubClass,
+        countries: SymbolProfile.countries,
+        currency: SymbolProfile.currency,
+        dataSource: SymbolProfile.dataSource,
+        isin: SymbolProfile.isin,
+        name: SymbolProfile.name,
+        sectors: SymbolProfile.sectors,
+        symbol: SymbolProfile.symbol,
+        userId: SymbolProfile.userId
+      },
       averagePrice: averagePrice.toNumber(),
       dataProviderInfo: portfolioCalculator.getDataProviderInfos()?.[0],
       dividendInBaseCurrency: dividendInBaseCurrency.toNumber(),
@@ -1390,19 +1392,13 @@ export class PortfolioService {
 
   public async updateTags({
     dataSource,
-    impersonationId,
     symbol,
     tags,
     userId
   }: {
-    dataSource: DataSource;
-    impersonationId: string;
-    symbol: string;
     tags: Tag[];
     userId: string;
-  }) {
-    userId = await this.getUserId(impersonationId, userId);
-
+  } & AssetProfileIdentifier) {
     await this.activitiesService.assignTags({
       dataSource,
       symbol,
@@ -1479,31 +1475,29 @@ export class PortfolioService {
     for (const [, position] of Object.entries(holdings)) {
       const value = position.valueInBaseCurrency;
 
-      if (position.assetProfile.assetClass !== AssetClass.LIQUIDITY) {
-        if (position.assetProfile.countries.length > 0) {
-          markets.developedMarkets.valueInBaseCurrency +=
-            position.markets.developedMarkets * value;
-          markets.emergingMarkets.valueInBaseCurrency +=
-            position.markets.emergingMarkets * value;
-          markets.otherMarkets.valueInBaseCurrency +=
-            position.markets.otherMarkets * value;
+      if (position.assetProfile.countries.length > 0) {
+        markets.developedMarkets.valueInBaseCurrency +=
+          position.markets.developedMarkets * value;
+        markets.emergingMarkets.valueInBaseCurrency +=
+          position.markets.emergingMarkets * value;
+        markets.otherMarkets.valueInBaseCurrency +=
+          position.markets.otherMarkets * value;
 
-          marketsAdvanced.asiaPacific.valueInBaseCurrency +=
-            position.marketsAdvanced.asiaPacific * value;
-          marketsAdvanced.emergingMarkets.valueInBaseCurrency +=
-            position.marketsAdvanced.emergingMarkets * value;
-          marketsAdvanced.europe.valueInBaseCurrency +=
-            position.marketsAdvanced.europe * value;
-          marketsAdvanced.japan.valueInBaseCurrency +=
-            position.marketsAdvanced.japan * value;
-          marketsAdvanced.northAmerica.valueInBaseCurrency +=
-            position.marketsAdvanced.northAmerica * value;
-          marketsAdvanced.otherMarkets.valueInBaseCurrency +=
-            position.marketsAdvanced.otherMarkets * value;
-        } else {
-          markets[UNKNOWN_KEY].valueInBaseCurrency += value;
-          marketsAdvanced[UNKNOWN_KEY].valueInBaseCurrency += value;
-        }
+        marketsAdvanced.asiaPacific.valueInBaseCurrency +=
+          position.marketsAdvanced.asiaPacific * value;
+        marketsAdvanced.emergingMarkets.valueInBaseCurrency +=
+          position.marketsAdvanced.emergingMarkets * value;
+        marketsAdvanced.europe.valueInBaseCurrency +=
+          position.marketsAdvanced.europe * value;
+        marketsAdvanced.japan.valueInBaseCurrency +=
+          position.marketsAdvanced.japan * value;
+        marketsAdvanced.northAmerica.valueInBaseCurrency +=
+          position.marketsAdvanced.northAmerica * value;
+        marketsAdvanced.otherMarkets.valueInBaseCurrency +=
+          position.marketsAdvanced.otherMarkets * value;
+      } else {
+        markets[UNKNOWN_KEY].valueInBaseCurrency += value;
+        marketsAdvanced[UNKNOWN_KEY].valueInBaseCurrency += value;
       }
     }
 
@@ -1913,7 +1907,7 @@ export class PortfolioService {
 
     for (const activity of activities) {
       if (
-        activity.account?.isExcluded ||
+        (activity.account && isAccountExcluded(activity.account)) ||
         activity.tags?.some(({ id }) => {
           return id === TAG_ID_EXCLUDE_FROM_ANALYSIS;
         })
@@ -2157,13 +2151,14 @@ export class PortfolioService {
     let currentAccounts: (Account & {
       Order?: Order[];
       platform?: Platform;
+      tags?: Tag[];
     })[] = [];
 
     if (filters.length === 0) {
       currentAccounts = await this.accountService.getAccounts(userId);
     } else if (filters.length === 1 && filters[0].type === 'ACCOUNT') {
       currentAccounts = await this.accountService.accounts({
-        include: { platform: true },
+        include: { platform: true, tags: true },
         where: { id: filters[0].id }
       });
     } else {
@@ -2180,50 +2175,54 @@ export class PortfolioService {
       );
 
       currentAccounts = await this.accountService.accounts({
-        include: { platform: true },
+        include: { platform: true, tags: true },
         where: { id: { in: accountIds } }
       });
     }
 
     currentAccounts = currentAccounts.filter((account) => {
-      return withExcludedAccounts || account.isExcluded === false;
+      return withExcludedAccounts || !isAccountExcluded(account);
     });
 
-    for (const account of currentAccounts) {
+    // Iterate over the accounts plus a null entry to group activities without
+    // an account into the unknown bucket
+    for (const account of [...currentAccounts, null]) {
       const ordersByAccount = activities.filter(({ accountId }) => {
-        return accountId === account.id;
+        return account ? accountId === account.id : !accountId;
       });
 
-      accounts[account.id] = {
-        balance: account.balance,
-        currency: account.currency,
-        investmentInBaseCurrency: 0,
-        name: account.name,
-        valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
-          account.balance,
-          account.currency,
-          userCurrency
-        )
-      };
-
-      if (platforms[account.platformId || UNKNOWN_KEY]?.valueInBaseCurrency) {
-        platforms[account.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
-          this.exchangeRateDataService.toCurrency(
-            account.balance,
-            account.currency,
-            userCurrency
-          );
-      } else {
-        platforms[account.platformId || UNKNOWN_KEY] = {
+      if (account) {
+        accounts[account.id] = {
           balance: account.balance,
           currency: account.currency,
-          name: account.platform?.name,
+          investmentInBaseCurrency: 0,
+          name: account.name,
           valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
             account.balance,
             account.currency,
             userCurrency
           )
         };
+
+        if (platforms[account.platformId || UNKNOWN_KEY]?.valueInBaseCurrency) {
+          platforms[account.platformId || UNKNOWN_KEY].valueInBaseCurrency +=
+            this.exchangeRateDataService.toCurrency(
+              account.balance,
+              account.currency,
+              userCurrency
+            );
+        } else {
+          platforms[account.platformId || UNKNOWN_KEY] = {
+            balance: account.balance,
+            currency: account.currency,
+            name: account.platform?.name,
+            valueInBaseCurrency: this.exchangeRateDataService.toCurrency(
+              account.balance,
+              account.currency,
+              userCurrency
+            )
+          };
+        }
       }
 
       const investmentStateBySymbol: {

@@ -675,13 +675,11 @@ export class PortfolioController {
   @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
   public async updateHoldingTags(
     @Body() data: UpdateHoldingTagsDto,
-    @Headers(HEADER_KEY_IMPERSONATION.toLowerCase()) impersonationId: string,
     @Param('dataSource') dataSource: DataSource,
     @Param('symbol') symbol: string
   ): Promise<void> {
     const holding = await this.portfolioService.getHolding({
       dataSource,
-      impersonationId,
       symbol,
       userId: this.request.user.id
     });
@@ -695,7 +693,6 @@ export class PortfolioController {
 
     await this.portfolioService.updateTags({
       dataSource,
-      impersonationId,
       symbol,
       tags: data.tags,
       userId: this.request.user.id

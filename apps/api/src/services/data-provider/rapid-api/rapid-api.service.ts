@@ -8,10 +8,7 @@ import {
   GetSearchParams
 } from '@ghostfolio/api/services/data-provider/interfaces/data-provider.interface';
 import { FetchService } from '@ghostfolio/api/services/fetch/fetch.service';
-import {
-  ghostfolioFearAndGreedIndexSymbol,
-  ghostfolioFearAndGreedIndexSymbolStocks
-} from '@ghostfolio/common/config';
+import { ghostfolioFearAndGreedIndexSymbolStocks } from '@ghostfolio/common/config';
 import { DATE_FORMAT, getYesterday } from '@ghostfolio/common/helper';
 import {
   DataProviderHistoricalResponse,
@@ -64,21 +61,18 @@ export class RapidApiService implements DataProviderInterface {
     [symbol: string]: { [date: string]: DataProviderHistoricalResponse };
   }> {
     try {
-      if (
-        [
-          ghostfolioFearAndGreedIndexSymbol,
-          ghostfolioFearAndGreedIndexSymbolStocks
-        ].includes(symbol)
-      ) {
+      if (symbol === ghostfolioFearAndGreedIndexSymbolStocks) {
         const fgi = await this.getFearAndGreedIndex();
 
-        return {
-          [symbol]: {
-            [format(getYesterday(), DATE_FORMAT)]: {
-              marketPrice: fgi.previousClose.value
+        if (fgi) {
+          return {
+            [symbol]: {
+              [format(getYesterday(), DATE_FORMAT)]: {
+                marketPrice: fgi.previousClose.value
+              }
             }
-          }
-        };
+          };
+        }
       }
     } catch (error) {
       throw new Error(
@@ -106,22 +100,19 @@ export class RapidApiService implements DataProviderInterface {
     try {
       const symbol = symbols[0];
 
-      if (
-        [
-          ghostfolioFearAndGreedIndexSymbol,
-          ghostfolioFearAndGreedIndexSymbolStocks
-        ].includes(symbol)
-      ) {
+      if (symbol === ghostfolioFearAndGreedIndexSymbolStocks) {
         const fgi = await this.getFearAndGreedIndex();
 
-        return {
-          [symbol]: {
-            currency: undefined,
-            dataSource: this.getName(),
-            marketPrice: fgi.now.value,
-            marketState: 'open'
-          }
-        };
+        if (fgi) {
+          return {
+            [symbol]: {
+              currency: undefined,
+              dataSource: this.getName(),
+              marketPrice: fgi.now.value,
+              marketState: 'open'
+            }
+          };
+        }
       }
     } catch (error) {
       this.logger.error(error);

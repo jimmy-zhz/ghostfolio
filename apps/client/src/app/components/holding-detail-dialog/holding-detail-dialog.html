@@ -1,7 +1,7 @@
 <gf-dialog-header
   position="center"
   [deviceType]="data.deviceType"
-  [title]="SymbolProfile?.name ?? SymbolProfile?.symbol"
+  [title]="assetProfile?.name ?? assetProfile?.symbol"
   (closeButtonClicked)="onClose()"
 />
 
@@ -26,11 +26,11 @@
       [buyDateMarkers]="buyDateMarkers"
       [sellDateMarkers]="sellDateMarkers"
       [colorScheme]="data.colorScheme"
-      [currency]="SymbolProfile?.currency"
+      [currency]="assetProfile?.currency"
       [historicalDataItems]="historicalDataItems"
       [isAnimated]="true"
       [label]="
-        isUUID(data.symbol) ? (SymbolProfile?.name ?? data.symbol) : data.symbol
+        isUUID(data.symbol) ? (assetProfile?.name ?? data.symbol) : data.symbol
       "
       [locale]="data.locale"
       [showGradient]="true"
@@ -62,8 +62,8 @@
                 [value]="netPerformanceWithCurrencyEffect"
               >
                 @if (
-                  SymbolProfile?.currency &&
-                  data.baseCurrency !== SymbolProfile?.currency
+                  assetProfile?.currency &&
+                  data.baseCurrency !== assetProfile?.currency
                 ) {
                   Change with currency effect
                 } @else {
@@ -82,8 +82,8 @@
                 [value]="netPerformancePercentWithCurrencyEffect"
               >
                 @if (
-                  SymbolProfile?.currency &&
-                  data.baseCurrency !== SymbolProfile?.currency
+                  assetProfile?.currency &&
+                  data.baseCurrency !== assetProfile?.currency
                 ) {
                   Performance with currency effect
                 } @else {
@@ -98,7 +98,7 @@
                 [isCurrency]="true"
                 [locale]="data.locale"
                 [precision]="averagePricePrecision"
-                [unit]="SymbolProfile?.currency"
+                [unit]="assetProfile?.currency"
                 [value]="averagePrice"
                 >Average Unit Price</gf-value
               >
@@ -110,7 +110,7 @@
                 [isCurrency]="true"
                 [locale]="data.locale"
                 [precision]="marketPricePrecision"
-                [unit]="SymbolProfile?.currency"
+                [unit]="assetProfile?.currency"
                 [value]="marketPrice"
                 >Market Price</gf-value
               >
@@ -120,13 +120,15 @@
                 i18n
                 size="medium"
                 [class.text-danger]="
-                  marketPriceMin?.toFixed(2) === marketPrice?.toFixed(2) &&
-                  marketPriceMax?.toFixed(2) !== marketPriceMin?.toFixed(2)
+                  round(marketPriceMin, marketPriceMinPrecision) ===
+                    round(marketPrice, marketPricePrecision) &&
+                  round(marketPriceMax, marketPriceMaxPrecision) !==
+                    round(marketPriceMin, marketPriceMinPrecision)
                 "
                 [isCurrency]="true"
                 [locale]="data.locale"
                 [precision]="marketPriceMinPrecision"
-                [unit]="SymbolProfile?.currency"
+                [unit]="assetProfile?.currency"
                 [value]="marketPriceMin"
                 >Minimum Price</gf-value
               >
@@ -136,13 +138,15 @@
                 i18n
                 size="medium"
                 [class.text-success]="
-                  marketPriceMax?.toFixed(2) === marketPrice?.toFixed(2) &&
-                  marketPriceMax?.toFixed(2) !== marketPriceMin?.toFixed(2)
+                  round(marketPriceMax, marketPriceMaxPrecision) ===
+                    round(marketPrice, marketPricePrecision) &&
+                  round(marketPriceMax, marketPriceMaxPrecision) !==
+                    round(marketPriceMin, marketPriceMinPrecision)
                 "
                 [isCurrency]="true"
                 [locale]="data.locale"
                 [precision]="marketPriceMaxPrecision"
-                [unit]="SymbolProfile?.currency"
+                [unit]="assetProfile?.currency"
                 [value]="marketPriceMax"
                 >Maximum Price</gf-value
               >
@@ -252,23 +256,23 @@
               >
             </div>
             @if (
-              SymbolProfile?.countries?.length > 0 ||
-              SymbolProfile?.sectors?.length > 0
+              assetProfile?.countries?.length > 0 ||
+              assetProfile?.sectors?.length > 0
             ) {
               @if (
-                SymbolProfile?.countries?.length === 1 &&
-                SymbolProfile?.sectors?.length === 1
+                assetProfile?.countries?.length === 1 &&
+                assetProfile?.sectors?.length === 1
               ) {
                 <div class="col-6 mb-3">
                   <gf-value
                     i18n
                     size="medium"
                     [locale]="data.locale"
-                    [value]="translate(SymbolProfile.sectors[0].name)"
+                    [value]="translate(assetProfile.sectors[0].name)"
                     >Sector</gf-value
                   >
                 </div>
-                @if (SymbolProfile?.countries?.length === 1) {
+                @if (assetProfile?.countries?.length === 1) {
                   <div class="col-6 mb-3">
                     <gf-value
                       i18n
@@ -276,8 +280,7 @@
                       [locale]="data.locale"
                       [value]="
                         getCountryName({
-                          code: SymbolProfile.countries[0].code,
-                          locale: data.locale
+                          code: assetProfile.countries[0].code
                         })
                       "
                       >Country</gf-value
@@ -316,8 +319,8 @@
                 i18n
                 size="medium"
                 [enableCopyToClipboardButton]="true"
-                [hidden]="!SymbolProfile?.symbol"
-                [value]="SymbolProfile?.symbol"
+                [hidden]="!assetProfile?.symbol"
+                [value]="assetProfile?.symbol"
                 >Symbol</gf-value
               >
             </div>
@@ -325,8 +328,8 @@
               <gf-value
                 size="medium"
                 [enableCopyToClipboardButton]="true"
-                [hidden]="!SymbolProfile?.isin"
-                [value]="SymbolProfile?.isin"
+                [hidden]="!assetProfile?.isin"
+                [value]="assetProfile?.isin"
                 >ISIN</gf-value
               >
             </div>
@@ -407,12 +410,12 @@
             <div class="d-none d-sm-block ml-2" i18n>Market Data</div>
           </ng-template>
           <gf-historical-market-data-editor
-            [currency]="SymbolProfile?.currency"
-            [dataSource]="SymbolProfile?.dataSource"
+            [currency]="assetProfile?.currency"
+            [dataSource]="assetProfile?.dataSource"
             [dateOfFirstActivity]="dateOfFirstActivity"
             [locale]="data.locale"
             [marketData]="marketDataItems"
-            [symbol]="SymbolProfile?.symbol"
+            [symbol]="assetProfile?.symbol"
             [user]="user"
             (marketDataChanged)="onMarketDataChanged($event)"
           />
@@ -426,6 +429,7 @@
         [hasPermissionToCreateTag]="hasPermissionToCreateOwnTag"
         [readonly]="!data.hasPermissionToUpdateActivity"
         [tagsAvailable]="tagsAvailable"
+        [tagsReadOnly]="tagsOfAccounts"
       />
     </form>
 
@@ -465,8 +469,8 @@
                 mat-stroked-button
                 [queryParams]="{
                   assetProfileDialog: true,
-                  dataSource: SymbolProfile?.dataSource,
-                  symbol: SymbolProfile?.symbol
+                  dataSource: assetProfile?.dataSource,
+                  symbol: assetProfile?.symbol
                 }"
                 [routerLink]="routerLinkAdminControlMarketData"
                 (click)="onClose()"

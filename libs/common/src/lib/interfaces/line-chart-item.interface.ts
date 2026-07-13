@@ -1,5 +1,7 @@
-export interface LineChartItem {
+export interface LineChartItem<T = number> {
   date: string;
   quantity?: number;
-  value: number;
+  value: T;
 }
+
+export type NullableLineChartItem = LineChartItem<number | null>;
