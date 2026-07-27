@@ -1,7 +1,13 @@
 export type DateRange =
+  | '10y'
   | '1d'
+  | '1m'
+  | '1w'
   | '1y'
+  | '2y'
+  | '3m'
   | '5y'
+  | '6m'
   | 'max'
   | 'mtd'
   | 'wtd'

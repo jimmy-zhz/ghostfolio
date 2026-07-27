@@ -1,42 +1,68 @@
-import { getTooltipOptions, getVerticalHoverLinePlugin } from '@ghostfolio/common/chart-helper';
+import {
+  DEFAULT_CHART_DATE_RANGE,
+  filterByDateRange,
+  getDateRangeSlice,
+  getSelectableDateRanges
+} from '@ghostfolio/common/chart-date-range';
+import {
+  getTooltipOptions,
+  getVerticalHoverLinePlugin
+} from '@ghostfolio/common/chart-helper';
 import { primaryColorRgb, secondaryColorRgb } from '@ghostfolio/common/config';
-import { getBackgroundColor, getDateFormatString, getLocale, getTextColor } from '@ghostfolio/common/helper';
-import { LineChartItem } from '@ghostfolio/common/interfaces';
-import { ColorScheme } from '@ghostfolio/common/types';
+import {
+  getBackgroundColor,
+  getDateFormatString,
+  getLocale,
+  getTextColor
+} from '@ghostfolio/common/helper';
+import { LineChartItem, ToggleOption } from '@ghostfolio/common/interfaces';
+import {
+  PriceStatistics,
+  calculatePriceStatistics
+} from '@ghostfolio/common/price-statistics';
+import { ColorScheme, DateRange } from '@ghostfolio/common/types';
 
-
-
-import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, type ElementRef, Input, OnChanges, OnDestroy, SimpleChanges, ViewChild } from '@angular/core';
-import { type AnimationsSpec, Chart, Filler, LinearScale, LineController, LineElement, PointElement, type ScriptableTooltipContext, TimeScale, Tooltip, type TooltipItem, type TooltipOptions } from 'chart.js';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  type ElementRef,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnDestroy,
+  Output,
+  SimpleChanges,
+  ViewChild
+} from '@angular/core';
+import {
+  type AnimationsSpec,
+  Chart,
+  Filler,
+  LinearScale,
+  LineController,
+  LineElement,
+  PointElement,
+  type ScriptableTooltipContext,
+  TimeScale,
+  Tooltip,
+  type TooltipItem,
+  type TooltipModel,
+  type TooltipOptions
+} from 'chart.js';
 import 'chartjs-adapter-date-fns';
-import annotationPlugin, { type AnnotationOptions } from 'chartjs-plugin-annotation';
+import annotationPlugin, {
+  type AnnotationOptions
+} from 'chartjs-plugin-annotation';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
-
-
 import { registerChartConfiguration } from '../chart';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+import { GfToggleComponent } from '../toggle/toggle.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [NgxSkeletonLoaderModule],
+  imports: [GfToggleComponent, NgxSkeletonLoaderModule],
   selector: 'gf-line-chart',
   styleUrls: ['./line-chart.component.scss'],
   templateUrl: './line-chart.component.html'
@@ -56,7 +82,9 @@ export class GfLineChartComponent
   @Input() locale = getLocale();
   @Input() showGradient = false;
   @Input() showLegend = false;
+  @Input() showDateRangeSelector = false;
   @Input() showLoader = true;
+  @Input() showPriceStatistics = false;
   @Input() showXAxis = false;
   @Input() showYAxis = false;
   @Input() unit: string;
@@ -65,13 +93,40 @@ export class GfLineChartComponent
   @Input() yMin: number;
   @Input() yMinLabel: string;
 
+  @Output() dateRangeChange = new EventEmitter<DateRange>();
+
   @ViewChild('chartCanvas') chartCanvas: ElementRef<HTMLCanvasElement>;
 
   public chart: Chart<'line'>;
   public isLoading = true;
 
+  protected dateRange: DateRange = DEFAULT_CHART_DATE_RANGE;
+  protected dateRangeOptions: ToggleOption[] = [];
+
   private annotationRevealTimer: ReturnType<typeof setTimeout> | undefined;
+  private hasRendered = false;
+  private tooltipElement: HTMLDivElement | undefined;
+  private visibleBenchmarkDataItems: LineChartItem[] = [];
+  private visibleHistoricalDataItems: LineChartItem[] = [];
+  private visiblePriceStatistics: PriceStatistics[] = [];
   private readonly ANIMATION_DURATION = 800;
+  private readonly NEGATIVE_COLOR = 'rgb(177, 0, 0)';
+  private readonly POSITIVE_COLOR = 'rgb(0, 177, 0)';
+  private readonly dateRangeLabels: Record<string, string> = {
+    '10y': '10Y',
+    '1m': '1M',
+    '1w': '1W',
+    '1y': '1Y',
+    '2y': '2Y',
+    '3m': '3M',
+    '5y': '5Y',
+    '6m': '6M',
+    max: $localize`ALL`,
+    ytd: $localize`YTD`
+  };
+  private readonly changeFromLastTroughLabel = $localize`From Last Low`;
+  private readonly changeFromMaximumLabel = $localize`From All-Time High`;
+  private readonly dailyChangeLabel = $localize`Daily Change`;
   private readonly marketChangeLabel = $localize`Market Change`;
   private readonly sharesLabel = $localize`Shares`;
 
@@ -103,6 +158,8 @@ export class GfLineChartComponent
 
   public ngOnChanges(changes: SimpleChanges) {
     if (changes['historicalDataItems']) {
+      this.hasRendered = false;
+
       setTimeout(() => {
         // Wait for the chartCanvas
         this.initialize();
@@ -125,21 +182,114 @@ export class GfLineChartComponent
     }
   }
 
+  protected onDateRangeChange(dateRange: DateRange) {
+    this.dateRange = dateRange;
+
+    this.dateRangeChange.emit(dateRange);
+
+    // Skip the animation, switching the date range should feel instant
+    this.hasRendered = true;
+
+    this.initialize();
+
+    this.changeDetectorRef.markForCheck();
+  }
+
+  /**
+   * Restricts every series to the selected date range. The price statistics
+   * are derived from the full history first, hence the all-time high does not
+   * depend on the selected date range.
+   */
+  private applyDateRange() {
+    const historicalDataItems = this.historicalDataItems ?? [];
+    const benchmarkDataItems = this.benchmarkDataItems ?? [];
+
+    const priceStatistics = this.showPriceStatistics
+      ? calculatePriceStatistics({
+          values: historicalDataItems.map(({ value }) => {
+            return value;
+          })
+        })
+      : [];
+
+    if (!this.showDateRangeSelector) {
+      this.visibleBenchmarkDataItems = benchmarkDataItems;
+      this.visibleHistoricalDataItems = historicalDataItems;
+      this.visiblePriceStatistics = priceStatistics;
+
+      return;
+    }
+
+    this.updateDateRangeOptions();
+
+    const { endIndex, startIndex } = getDateRangeSlice({
+      dateRange: this.dateRange,
+      dates: historicalDataItems.map(({ date }) => {
+        return date;
+      })
+    });
+
+    this.visibleBenchmarkDataItems = benchmarkDataItems.slice(
+      startIndex,
+      endIndex
+    );
+    this.visibleHistoricalDataItems = historicalDataItems.slice(
+      startIndex,
+      endIndex
+    );
+    this.visiblePriceStatistics = priceStatistics.slice(startIndex, endIndex);
+  }
+
+  private updateDateRangeOptions() {
+    const selectableDateRanges = getSelectableDateRanges({
+      dates: (this.historicalDataItems ?? []).map(({ date }) => {
+        return date;
+      })
+    });
+
+    this.dateRangeOptions = selectableDateRanges.map((dateRange) => {
+      return { label: this.dateRangeLabels[dateRange], value: dateRange };
+    });
+
+    if (!selectableDateRanges.includes(this.dateRange)) {
+      // Fall back to the shortest date range with data
+      this.dateRange = selectableDateRanges[0];
+    }
+  }
+
+  private getVisibleMarkers(markers: LineChartItem[]) {
+    if (!this.showDateRangeSelector) {
+      return markers ?? [];
+    }
+
+    return filterByDateRange({
+      dateRange: this.dateRange,
+      items: markers ?? []
+    });
+  }
+
   public ngOnDestroy() {
     if (this.annotationRevealTimer) {
       clearTimeout(this.annotationRevealTimer);
     }
+
+    this.tooltipElement?.remove();
+    this.tooltipElement = undefined;
+
     this.chart?.destroy();
   }
 
   private initialize() {
     this.isLoading = true;
+
+    this.applyDateRange();
+
     const benchmarkPrices: number[] = [];
     const labels: string[] = [];
     const marketPrices: number[] = [];
 
-    this.historicalDataItems?.forEach((historicalDataItem, index) => {
-      benchmarkPrices.push(this.benchmarkDataItems?.[index]?.value);
+    this.visibleHistoricalDataItems.forEach((historicalDataItem, index) => {
+      benchmarkPrices.push(this.visibleBenchmarkDataItems[index]?.value);
       labels.push(historicalDataItem.date);
       marketPrices.push(historicalDataItem.value);
     });
@@ -189,11 +339,11 @@ export class GfLineChartComponent
     };
 
     const buyDateMarkerAnnotations = this.buildBuyDateMarkerAnnotations({
-      display: !this.isAnimated
+      display: !this.isAnimationEnabled
     });
 
     const sellDateMarkerAnnotations = this.buildSellDateMarkerAnnotations({
-      display: !this.isAnimated
+      display: !this.isAnimationEnabled
     });
 
     const dateMarkerAnnotations = {
@@ -215,20 +365,20 @@ export class GfLineChartComponent
         };
         this.chart.options.plugins.tooltip =
           this.getTooltipPluginConfiguration();
-        this.chart.options.animations = this.isAnimated
+        this.chart.options.animations = this.isAnimationEnabled
           ? animations
           : undefined;
 
         this.chart.update();
 
-        if (this.isAnimated) {
+        if (this.isAnimationEnabled) {
           this.scheduleAnnotationReveal();
         }
       } else {
         this.chart = new Chart(this.chartCanvas.nativeElement, {
           data,
           options: {
-            animations: this.isAnimated ? animations : undefined,
+            animations: this.isAnimationEnabled ? animations : undefined,
             aspectRatio: 16 / 9,
             elements: {
               point: {
@@ -329,13 +479,20 @@ export class GfLineChartComponent
           type: 'line'
         });
 
-        if (this.isAnimated) {
+        if (this.isAnimationEnabled) {
           this.scheduleAnnotationReveal();
         }
       }
     }
 
+    this.hasRendered = true;
     this.isLoading = false;
+  }
+
+  private get isAnimationEnabled() {
+    // Animate the initial rendering only, switching the date range should feel
+    // instant
+    return this.isAnimated && !this.hasRendered;
   }
 
   private getAnimationConfigurationForAxis({
@@ -363,25 +520,25 @@ export class GfLineChartComponent
     };
   }
 
-  private buildBuyDateMarkerAnnotations({
-    display
-  }: { display: boolean } = { display: true }): Record<string, AnnotationOptions> {
+  private buildBuyDateMarkerAnnotations(
+    { display }: { display: boolean } = { display: true }
+  ): Record<string, AnnotationOptions> {
     return this.buildDateMarkerAnnotations({
       backgroundColor: 'rgba(0,177,0,0.4)',
       display,
       keyPrefix: 'buyDateMarker',
-      markers: this.buyDateMarkers
+      markers: this.getVisibleMarkers(this.buyDateMarkers)
     });
   }
 
-  private buildSellDateMarkerAnnotations({
-    display
-  }: { display: boolean } = { display: true }): Record<string, AnnotationOptions> {
+  private buildSellDateMarkerAnnotations(
+    { display }: { display: boolean } = { display: true }
+  ): Record<string, AnnotationOptions> {
     return this.buildDateMarkerAnnotations({
       backgroundColor: 'rgba(177,0,0,0.4)',
       display,
       keyPrefix: 'sellDateMarker',
-      markers: this.sellDateMarkers
+      markers: this.getVisibleMarkers(this.sellDateMarkers)
     });
   }
 
@@ -396,12 +553,12 @@ export class GfLineChartComponent
     keyPrefix: string;
     markers: LineChartItem[];
   }): Record<string, AnnotationOptions> {
-    if (!markers?.length || !this.historicalDataItems?.length) {
+    if (!markers?.length || !this.visibleHistoricalDataItems.length) {
       return {};
     }
 
     const priceByDate = new Map<string, number>();
-    for (const { date, value } of this.historicalDataItems) {
+    for (const { date, value } of this.visibleHistoricalDataItems) {
       if (date != null && value != null) {
         priceByDate.set(date, value);
       }
@@ -468,6 +625,15 @@ export class GfLineChartComponent
 
     return {
       ...tooltipOptions,
+      // The built-in tooltip renders all body lines with a single color,
+      // therefore an external tooltip is required to color the price
+      // statistics individually
+      enabled: !this.showPriceStatistics,
+      external: this.showPriceStatistics
+        ? (context) => {
+            this.renderExternalTooltip(context);
+          }
+        : undefined,
       // @ts-ignore: no need to set all attributes in callbacks
       callbacks: {
         ...tooltipOptions.callbacks,
@@ -492,7 +658,7 @@ export class GfLineChartComponent
     const dataIndex = tooltipItems?.[0]?.dataIndex;
 
     return dataIndex != null
-      ? this.historicalDataItems?.[dataIndex]?.date
+      ? this.visibleHistoricalDataItems[dataIndex]?.date
       : undefined;
   }
 
@@ -503,9 +669,9 @@ export class GfLineChartComponent
       return [];
     }
 
-    const marketPrice = this.historicalDataItems?.[dataIndex]?.value;
-    const quantity = this.historicalDataItems?.[dataIndex]?.quantity;
-    const averagePrice = this.benchmarkDataItems?.[dataIndex]?.value;
+    const marketPrice = this.visibleHistoricalDataItems[dataIndex]?.value;
+    const quantity = this.visibleHistoricalDataItems[dataIndex]?.quantity;
+    const averagePrice = this.visibleBenchmarkDataItems[dataIndex]?.value;
 
     if (marketPrice == null || averagePrice == null || quantity == null) {
       return [];
@@ -525,41 +691,38 @@ export class GfLineChartComponent
       return [];
     }
 
-    const buyMarker = this.buyDateMarkers?.find((marker) => {
-      return marker.date === date;
-    });
+    const buyLines = this.getVisibleMarkers(this.buyDateMarkers)
+      .filter((marker) => {
+        return marker.date === date && marker.quantity;
+      })
+      .map((marker) => {
+        return `${this.sharesLabel}: +${marker.quantity} (${this.formatUnitPrice(marker.value)})`;
+      });
 
-    if (buyMarker?.quantity) {
-      const amount = buyMarker.quantity * buyMarker.value;
+    const sellLines = this.getVisibleMarkers(this.sellDateMarkers)
+      .filter((marker) => {
+        return marker.date === date && marker.quantity;
+      })
+      .map((marker) => {
+        return `${this.sharesLabel}: -${marker.quantity} (${this.formatUnitPrice(marker.value)})`;
+      });
 
-      return [
-        `${this.sharesLabel}: +${buyMarker.quantity} (${this.formatAmount(amount)})`
-      ];
-    }
-
-    const sellMarker = this.sellDateMarkers?.find((marker) => {
-      return marker.date === date;
-    });
-
-    if (sellMarker?.quantity) {
-      const amount = -(sellMarker.quantity * sellMarker.value);
-
-      return [
-        `${this.sharesLabel}: -${sellMarker.quantity} (${this.formatAmount(amount)})`
-      ];
-    }
-
-    return [];
+    return [...buyLines, ...sellLines];
   }
 
   private formatAmount(amount: number) {
     const sign = amount >= 0 ? '+' : '';
-    const formattedAmount = amount.toLocaleString(this.locale, {
+
+    return `${sign}${this.formatUnitPrice(amount)}`;
+  }
+
+  private formatUnitPrice(value: number) {
+    const formattedAmount = value.toLocaleString(this.locale, {
       maximumFractionDigits: 2,
       minimumFractionDigits: 2
     });
 
-    return `${sign}${formattedAmount}${this.currency ? ` ${this.currency}` : ''}`;
+    return `${formattedAmount}${this.currency ? ` ${this.currency}` : ''}`;
   }
 
   private getTransactionQuantityTooltipColor(
@@ -568,23 +731,206 @@ export class GfLineChartComponent
     const date = this.getDateForTooltipItems(tooltipItems);
 
     if (date) {
-      if (
-        this.buyDateMarkers?.some((marker) => {
-          return marker.date === date;
-        })
-      ) {
+      const hasBuy = this.buyDateMarkers?.some((marker) => {
+        return marker.date === date;
+      });
+      const hasSell = this.sellDateMarkers?.some((marker) => {
+        return marker.date === date;
+      });
+
+      // The built-in tooltip supports only one color for all footer lines
+      if (hasBuy && !hasSell) {
         return 'rgb(0, 177, 0)';
       }
 
-      if (
-        this.sellDateMarkers?.some((marker) => {
-          return marker.date === date;
-        })
-      ) {
+      if (hasSell && !hasBuy) {
         return 'rgb(177, 0, 0)';
       }
     }
 
     return `rgb(${getTextColor(this.colorScheme)})`;
+  }
+
+  private getPriceStatisticsTooltipRows(dataIndex: number | undefined) {
+    if (dataIndex == null) {
+      return [];
+    }
+
+    const {
+      changeFromLastTroughPercent,
+      changeFromMaximumPercent,
+      dailyChangePercent
+    } = this.visiblePriceStatistics[dataIndex] ?? {};
+
+    return [
+      { label: this.dailyChangeLabel, value: dailyChangePercent },
+      { label: this.changeFromMaximumLabel, value: changeFromMaximumPercent },
+      {
+        label: this.changeFromLastTroughLabel,
+        value: changeFromLastTroughPercent
+      }
+    ].flatMap(({ label, value }) => {
+      if (value == null || !isFinite(value)) {
+        return [];
+      }
+
+      return [
+        {
+          color: this.getChangeColor(value),
+          text: `${label}: ${this.formatPercent(value)}`
+        }
+      ];
+    });
+  }
+
+  private getChangeColor(value: number) {
+    if (value > 0) {
+      return this.POSITIVE_COLOR;
+    } else if (value < 0) {
+      return this.NEGATIVE_COLOR;
+    }
+
+    return `rgb(${getTextColor(this.colorScheme)})`;
+  }
+
+  private formatPercent(value: number) {
+    return value.toLocaleString(this.locale, {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+      signDisplay: 'exceptZero',
+      style: 'percent'
+    });
+  }
+
+  private renderExternalTooltip({
+    chart,
+    tooltip
+  }: {
+    chart: Chart;
+    tooltip: TooltipModel<'line'>;
+  }) {
+    const element = this.getOrCreateTooltipElement(chart);
+
+    if (!element) {
+      return;
+    }
+
+    if (tooltip.opacity === 0) {
+      element.style.opacity = '0';
+
+      return;
+    }
+
+    element.replaceChildren();
+
+    for (const title of tooltip.title ?? []) {
+      const titleElement = document.createElement('div');
+      titleElement.style.fontWeight = 'bold';
+      titleElement.textContent = title;
+
+      element.appendChild(titleElement);
+    }
+
+    (tooltip.body ?? []).forEach(({ lines }, index) => {
+      for (const line of lines) {
+        element.appendChild(
+          this.buildTooltipRow({
+            bulletColor: tooltip.labelColors?.[index]?.borderColor as string,
+            text: line
+          })
+        );
+      }
+    });
+
+    for (const { color, text } of this.getPriceStatisticsTooltipRows(
+      tooltip.dataPoints?.[0]?.dataIndex
+    )) {
+      element.appendChild(this.buildTooltipRow({ color, text }));
+    }
+
+    const { offsetLeft, offsetTop } = chart.canvas;
+
+    element.style.opacity = '1';
+    element.style.left = `${offsetLeft + tooltip.caretX}px`;
+    element.style.top = `${offsetTop + chart.chartArea.top}px`;
+
+    // Keep the tooltip within the boundaries of the canvas
+    const halfWidth = element.offsetWidth / 2;
+    const left = Math.min(
+      Math.max(tooltip.caretX, halfWidth),
+      chart.canvas.clientWidth - halfWidth
+    );
+
+    element.style.left = `${offsetLeft + left}px`;
+  }
+
+  private buildTooltipRow({
+    bulletColor,
+    color,
+    text
+  }: {
+    bulletColor?: string;
+    color?: string;
+    text: string;
+  }) {
+    const rowElement = document.createElement('div');
+    rowElement.style.alignItems = 'center';
+    rowElement.style.display = 'flex';
+    rowElement.style.whiteSpace = 'nowrap';
+
+    if (color) {
+      rowElement.style.color = color;
+    }
+
+    if (bulletColor) {
+      const bulletElement = document.createElement('span');
+      bulletElement.style.background = bulletColor;
+      bulletElement.style.borderRadius = '50%';
+      bulletElement.style.display = 'inline-block';
+      bulletElement.style.height = '0.5rem';
+      bulletElement.style.marginRight = '0.25rem';
+      bulletElement.style.width = '0.5rem';
+
+      rowElement.appendChild(bulletElement);
+    }
+
+    const textElement = document.createElement('span');
+    textElement.textContent = text;
+
+    rowElement.appendChild(textElement);
+
+    return rowElement;
+  }
+
+  private getOrCreateTooltipElement(chart: Chart) {
+    if (this.tooltipElement?.isConnected) {
+      return this.tooltipElement;
+    }
+
+    const parentElement = chart.canvas.parentNode as HTMLElement;
+
+    if (!parentElement) {
+      return undefined;
+    }
+
+    const element = document.createElement('div');
+    element.style.background = getBackgroundColor(this.colorScheme);
+    element.style.border = `1px solid rgba(${getTextColor(this.colorScheme)}, 0.1)`;
+    element.style.borderRadius = '2px';
+    element.style.color = `rgb(${getTextColor(this.colorScheme)})`;
+    element.style.fontSize = '0.75rem';
+    element.style.lineHeight = '1.4';
+    element.style.padding = '0.25rem 0.5rem';
+    element.style.pointerEvents = 'none';
+    element.style.position = 'absolute';
+    element.style.transform = 'translateX(-50%)';
+    element.style.transition = 'opacity 0.1s ease-in-out';
+    element.style.zIndex = '1';
+
+    parentElement.appendChild(element);
+
+    this.tooltipElement = element;
+
+    return element;
   }
 }

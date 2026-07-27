@@ -1,3 +1,12 @@
+@if (showDateRangeSelector) {
+  <gf-toggle
+    class="date-range-selector d-block mb-2 text-center"
+    [defaultValue]="dateRange"
+    [isLoading]="false"
+    [options]="dateRangeOptions"
+    (valueChange)="onDateRangeChange($event.value)"
+  />
+}
 @if (isLoading && showLoader) {
   <ngx-skeleton-loader
     animation="pulse"

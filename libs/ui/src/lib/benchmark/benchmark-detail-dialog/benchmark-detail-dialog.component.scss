@@ -5,7 +5,8 @@
     max-height: unset;
 
     gf-line-chart {
-      aspect-ratio: 16 / 9;
+      // The height is derived from the aspect ratio of the chart itself, as
+      // the date range selector adds to the height of the component
       margin: 0 -0.5rem;
     }
   }

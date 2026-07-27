@@ -168,7 +168,7 @@ export class GfBenchmarkComponent {
         locale: this.locale()
       },
       height: this.deviceType() === 'mobile' ? '98vh' : undefined,
-      width: this.deviceType() === 'mobile' ? '100vw' : '50rem'
+      width: this.deviceType() === 'mobile' ? '100vw' : '70vw'
     });
 
     dialogRef

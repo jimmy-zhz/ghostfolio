@@ -1,7 +1,17 @@
 :host {
   display: block;
+  // Anchor for the external tooltip
+  position: relative;
 
   ngx-skeleton-loader {
+    // Reserve the space of the chart while loading, also when the host has no
+    // height of its own
+    aspect-ratio: 16 / 9;
+    display: block;
     height: 100%;
+  }
+
+  .date-range-selector {
+    font-size: 0.9rem;
   }
 }
