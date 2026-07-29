@@ -172,6 +172,18 @@ docker compose -f docker/docker-compose.build.yml up -d
 
 Ghostfolio is available for various home server systems, including [CasaOS](https://github.com/bigbeartechworld/big-bear-casaos), [Home Assistant](https://github.com/lildude/ha-addon-ghostfolio), [Runtipi](https://www.runtipi.io/docs/apps-available), [TrueCharts](https://truecharts.org/charts/stable/ghostfolio), [Umbrel](https://apps.umbrel.com/app/ghostfolio), and [Unraid](https://unraid.net/community/apps?q=ghostfolio).
 
+## Documentation
+
+The documentation lives in [docs/](./docs/README.md) and is split into two buckets:
+
+- **[docs/guide/](./docs/guide/)** — operations manual for running and using this instance:
+  [getting started](./docs/guide/getting-started.md),
+  [deployment](./docs/guide/deployment.md),
+  [investment features](./docs/guide/investment-features.md),
+  [operations](./docs/guide/operations.md).
+- **[docs/dev/](./docs/dev/README.md)** — internal development documentation: requirements,
+  architecture, decision records, and domain notes.
+
 ## Development
 
 For detailed information on the environment setup and development process, please refer to [DEVELOPMENT.md](./DEVELOPMENT.md).

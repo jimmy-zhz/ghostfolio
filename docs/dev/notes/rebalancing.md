@@ -1,3 +1,4 @@
+# Rebalancing 再平衡（领域知识 + 测试用例）
 
 ## Rebalancing 工作原理
 ```text
