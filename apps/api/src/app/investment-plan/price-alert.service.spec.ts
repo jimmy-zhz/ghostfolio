@@ -41,7 +41,7 @@ describe('PriceAlertService.checkAndTriggerAlertsForPlans channel handling', () 
   function buildService(currentValue: number) {
     const dataProviderService = {
       getQuotes: jest.fn().mockResolvedValue({
-        'XIC.TO': { marketPrice: currentValue }
+        'YAHOO-XIC.TO': { marketPrice: currentValue }
       })
     } as unknown as DataProviderService;
 

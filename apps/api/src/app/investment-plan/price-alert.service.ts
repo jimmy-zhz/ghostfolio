@@ -1,6 +1,7 @@
 import { DataProviderService } from '@ghostfolio/api/services/data-provider/data-provider.service';
 import type { MailService } from '@ghostfolio/api/services/mail/mail.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
+import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AlertCondition, PriceAlert, Prisma } from '@prisma/client';
@@ -98,7 +99,13 @@ export class PriceAlertService {
       for (const alert of plan.priceAlerts) {
         if (!alert.isActive) continue;
 
-        const quote = quotes[alert.symbol];
+        const quote =
+          quotes[
+            getAssetProfileIdentifier({
+              dataSource: alert.dataSource,
+              symbol: alert.symbol
+            })
+          ];
         const currentValue = quote?.marketPrice;
 
         if (currentValue === undefined || currentValue === null) {
