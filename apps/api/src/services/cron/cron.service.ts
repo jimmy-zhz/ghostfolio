@@ -124,8 +124,9 @@ export class CronService {
     const plans = await this.investmentPlanService.getAllActivePlans();
 
     for (const plan of plans) {
-      // 1. Generate DCA signals — only while the master email switch is on
-      if (plan.emailEnabled && plan.notifyEmail && plan.subscribeDca) {
+      // 1. Generate DCA signals — generation is channel-agnostic, the delivery
+      //    step below decides whether they go out by email, webhook or both
+      if (plan.subscribeDca && plan.dcaSchedules?.length > 0) {
         await this.dcaSignalService.generateSignalsForPlan(plan.id, plan.dcaSchedules);
       }
 
