@@ -132,32 +132,34 @@
         <div class="col-md-6">
           <mat-card appearance="outlined">
             <mat-card-header>
-              <mat-card-title i18n>Email Notifications</mat-card-title>
+              <mat-card-title i18n>Notifications</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
-              <mat-checkbox class="mb-3 d-block" [(ngModel)]="emailEnabled" i18n
-                >Enable email notifications</mat-checkbox
-              >
+              <p class="mb-2 text-muted" i18n>Signals</p>
               <mat-checkbox
-                class="d-block mb-2 ms-4"
-                [disabled]="!emailEnabled"
+                class="d-block mb-2"
                 [(ngModel)]="plan.subscribeRebalancing"
                 i18n
                 >Subscribe to Rebalancing signals</mat-checkbox
               >
               <mat-checkbox
-                class="d-block mb-2 ms-4"
-                [disabled]="!emailEnabled"
+                class="d-block mb-2"
                 [(ngModel)]="plan.subscribeDca"
                 i18n
                 >Subscribe to DCA signals</mat-checkbox
               >
               <mat-checkbox
-                class="d-block mb-3 ms-4"
-                [disabled]="!emailEnabled"
+                class="d-block mb-3"
                 [(ngModel)]="plan.subscribePriceAlert"
                 i18n
                 >Subscribe to Price Alert signals</mat-checkbox
+              >
+
+              <hr class="mb-3" />
+
+              <p class="mb-2 text-muted" i18n>Email</p>
+              <mat-checkbox class="mb-3 d-block" [(ngModel)]="emailEnabled" i18n
+                >Enable email notifications</mat-checkbox
               >
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label i18n>Notification email</mat-label>
@@ -165,9 +167,14 @@
                   matInput
                   placeholder="your@gmail.com"
                   type="email"
+                  [disabled]="!emailEnabled"
                   [(ngModel)]="plan.notifyEmail"
                 />
               </mat-form-field>
+
+              <hr class="mb-3" />
+
+              <p class="mb-2 text-muted" i18n>Webhook</p>
               <mat-checkbox class="mb-3 d-block" [(ngModel)]="plan.webhookEnabled" i18n
                 >Enable webhook notifications</mat-checkbox
               >
