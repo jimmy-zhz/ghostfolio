@@ -168,6 +168,19 @@
                   [(ngModel)]="plan.notifyEmail"
                 />
               </mat-form-field>
+              <mat-checkbox class="mb-3 d-block" [(ngModel)]="plan.webhookEnabled" i18n
+                >Enable webhook notifications</mat-checkbox
+              >
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Webhook URL</mat-label>
+                <input
+                  matInput
+                  placeholder="https://example.com/webhook"
+                  type="url"
+                  [disabled]="!plan.webhookEnabled"
+                  [(ngModel)]="plan.webhookUrl"
+                />
+              </mat-form-field>
             </mat-card-content>
           </mat-card>
         </div>
@@ -203,16 +216,19 @@
                 >
               </mat-card-header>
               <mat-card-content class="py-2">
-                @for (action of rebalancingResult.actions; track action.symbol) {
+                @for (action of rebalancingResult.actions; track action.groupId) {
                   <div
                     class="d-flex align-items-center py-2 list-row-divider gap-3"
                   >
-                    <!-- Symbol + weight arrow -->
+                    <!-- Name/symbols + weight arrow -->
                     <div style="min-width: 180px;">
-                      <strong style=" margin-right: 2px;">{{ action.symbol }}</strong>
+                      <strong style=" margin-right: 2px;">{{ action.name }}</strong>
                       <span class="text-muted ms-2 small"
                         >{{ action.currentWeight | number: '1.0-1' }}% → {{ action.targetWeight }}%</span
                       >
+                      @if (action.symbols.length > 1) {
+                        <div class="text-muted small">{{ action.symbols.join(', ') }}</div>
+                      }
                     </div>
 
                     <!-- Current value in position -->
@@ -247,24 +263,27 @@
               <mat-card-title i18n>Configured allocations</mat-card-title>
             </mat-card-header>
             <mat-card-content class="py-3">
-              @if (allocations.length === 0) {
+              @if (allocationGroups.length === 0) {
                 <p class="text-muted" i18n>No target allocations configured yet.</p>
               }
-              @for (a of allocations; track a.symbol) {
+              @for (g of allocationGroups; track g.groupId) {
                 <div
                   class="d-flex align-items-center justify-content-between mb-2"
                 >
                   <div>
-                    <strong>{{ a.symbol }}</strong>
+                    <strong>{{ g.name }}</strong>
                     <span class="text-muted ms-2"
-                      ><span i18n>Target</span> {{ a.targetWeight }}% ·
-                      <span i18n>Threshold</span> {{ a.rebalanceThreshold }}%</span
+                      ><span i18n>Target</span> {{ g.targetWeight }}% ·
+                      <span i18n>Threshold</span> {{ g.rebalanceThreshold }}%</span
                     >
+                    @if (g.symbols.length > 1) {
+                      <div class="text-muted small">{{ g.symbols.join(', ') }}</div>
+                    }
                   </div>
                   <button
                     mat-icon-button
                     style="margin-right: 10px; width:100px; font-size:16px; color:red"
-                    (click)="onDeleteAllocation(a.symbol)"
+                    (click)="onDeleteAllocation(g.groupId)"
                   >
                     delete
                   </button>
@@ -287,9 +306,35 @@
             </mat-card-header>
             <mat-card-content class="py-3">
               <mat-form-field appearance="outline" class="w-100">
-                <mat-label i18n>Name, symbol or ISIN</mat-label>
-                <gf-symbol-autocomplete [formControl]="allocationSymbolControl" />
+                <mat-label i18n>Group name (optional)</mat-label>
+                <input matInput [(ngModel)]="newAllocation.name" />
               </mat-form-field>
+              @for (control of allocationSymbolControls; track control; let i = $index) {
+                <div class="d-flex align-items-center gap-2">
+                  <mat-form-field appearance="outline" class="w-100">
+                    <mat-label i18n>Name, symbol or ISIN</mat-label>
+                    <gf-symbol-autocomplete [formControl]="control" />
+                  </mat-form-field>
+                  @if (allocationSymbolControls.length > 1) {
+                    <button
+                      mat-icon-button
+                      type="button"
+                      (click)="removeAllocationSymbolRow(i)"
+                    >
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  }
+                </div>
+              }
+              <button
+                class="mb-3"
+                mat-button
+                type="button"
+                (click)="addAllocationSymbolRow()"
+                i18n
+              >
+                + Add another symbol
+              </button>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label i18n>Target weight %</mat-label>
                 <input

@@ -23,9 +23,19 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { catchError, of, timeout } from 'rxjs';
 
-interface Allocation {
+interface AllocationRow {
+  groupId: string;
+  name?: string;
   rebalanceThreshold: number;
   symbol: string;
+  targetWeight: number;
+}
+
+interface AllocationGroup {
+  groupId: string;
+  name: string;
+  rebalanceThreshold: number;
+  symbols: string[];
   targetWeight: number;
 }
 
@@ -79,13 +89,20 @@ export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
 })
 export class GfInvestmentPlanPageComponent implements OnInit {
   public activeTab: InvestmentPlanTab = 'rebalancing';
-  public allocationSymbolControl = new FormControl<LookupItem | null>(null);
-  public allocations: Allocation[] = [];
+  public allocationSymbolControls: FormControl<LookupItem | null>[] = [
+    new FormControl<LookupItem | null>(null)
+  ];
+  public allocationGroups: AllocationGroup[] = [];
   public dcaSchedules: DcaSchedule[] = [];
   public dcaSymbolControl = new FormControl<LookupItem | null>(null);
   public emailEnabled = false;
   public isLoading = true;
-  public newAllocation: Omit<Allocation, 'symbol'> = {
+  public newAllocation: {
+    name: string;
+    rebalanceThreshold: number;
+    targetWeight: number;
+  } = {
+    name: '',
     rebalanceThreshold: 5,
     targetWeight: 0
   };
@@ -116,6 +133,8 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     subscribeDca: boolean;
     subscribePriceAlert: boolean;
     subscribeRebalancing: boolean;
+    webhookEnabled: boolean;
+    webhookUrl: string;
   } = {
     capitalPool: 0,
     cashBuffer: 0,
@@ -128,7 +147,9 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     sipMonthlyBudget: 0,
     subscribeDca: true,
     subscribePriceAlert: true,
-    subscribeRebalancing: true
+    subscribeRebalancing: true,
+    webhookEnabled: false,
+    webhookUrl: ''
   };
   public aiReport = '';
   public isCopyingPrompt = false;
@@ -182,26 +203,40 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       });
   }
 
+  public addAllocationSymbolRow() {
+    this.allocationSymbolControls.push(new FormControl<LookupItem | null>(null));
+  }
+
+  public removeAllocationSymbolRow(index: number) {
+    if (this.allocationSymbolControls.length <= 1) return;
+    this.allocationSymbolControls.splice(index, 1);
+  }
+
   public onAddAllocation() {
-    const symbol = this.allocationSymbolControl.value?.symbol;
-    if (!symbol || this.newAllocation.targetWeight <= 0) return;
+    const symbols = this.allocationSymbolControls
+      .map((control) => control.value)
+      .filter((item): item is LookupItem => !!item?.symbol)
+      .map((item) => ({ name: item.name, symbol: item.symbol }));
+    if (!symbols.length || this.newAllocation.targetWeight <= 0) return;
     this.dataService
-      .putInvestmentPlanAllocation(symbol, {
+      .putInvestmentPlanAllocationGroup({
+        name: this.newAllocation.name || undefined,
         rebalanceThreshold: this.newAllocation.rebalanceThreshold,
+        symbols,
         targetWeight: this.newAllocation.targetWeight
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.allocationSymbolControl.reset();
-        this.newAllocation = { rebalanceThreshold: 5, targetWeight: 0 };
+        this.allocationSymbolControls = [new FormControl<LookupItem | null>(null)];
+        this.newAllocation = { name: '', rebalanceThreshold: 5, targetWeight: 0 };
         this.loadPlan();
         this.loadRebalancing();
       });
   }
 
-  public onDeleteAllocation(symbol: string) {
+  public onDeleteAllocation(groupId: string) {
     this.dataService
-      .deleteInvestmentPlanAllocation(symbol)
+      .deleteInvestmentPlanAllocationGroup(groupId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.loadPlan();
@@ -374,6 +409,25 @@ export class GfInvestmentPlanPageComponent implements OnInit {
     return map[type] ?? type;
   }
 
+  private groupAllocations(rows: AllocationRow[]): AllocationGroup[] {
+    const groups = new Map<string, AllocationGroup>();
+    for (const row of rows) {
+      const group = groups.get(row.groupId);
+      if (group) {
+        group.symbols.push(row.symbol);
+      } else {
+        groups.set(row.groupId, {
+          groupId: row.groupId,
+          name: row.name || row.symbol,
+          rebalanceThreshold: row.rebalanceThreshold,
+          symbols: [row.symbol],
+          targetWeight: row.targetWeight
+        });
+      }
+    }
+    return Array.from(groups.values());
+  }
+
   private loadPlan() {
     this.isLoading = true;
     this.dataService
@@ -396,14 +450,16 @@ export class GfInvestmentPlanPageComponent implements OnInit {
             sipMonthlyBudget: plan.sipMonthlyBudget ?? 0,
             subscribeDca: plan.subscribeDca ?? true,
             subscribePriceAlert: plan.subscribePriceAlert ?? true,
-            subscribeRebalancing: plan.subscribeRebalancing ?? true
+            subscribeRebalancing: plan.subscribeRebalancing ?? true,
+            webhookEnabled: plan.webhookEnabled ?? false,
+            webhookUrl: plan.webhookUrl ?? ''
           };
           this.emailEnabled = plan.emailEnabled;
-          this.allocations = plan.allocations ?? [];
+          this.allocationGroups = this.groupAllocations(plan.allocations ?? []);
           this.dcaSchedules = plan.dcaSchedules ?? [];
           this.priceAlerts = plan.priceAlerts ?? [];
-          this.totalAllocationWeight = this.allocations.reduce(
-            (s: number, a: Allocation) => s + a.targetWeight,
+          this.totalAllocationWeight = this.allocationGroups.reduce(
+            (s: number, g: AllocationGroup) => s + g.targetWeight,
             0
           );
         }

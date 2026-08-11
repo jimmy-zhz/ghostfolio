@@ -1,4 +1,5 @@
 import {
+  DateRangeSlice,
   DEFAULT_CHART_DATE_RANGE,
   filterByDateRange,
   getDateRangeSlice,
@@ -76,7 +77,9 @@ export class GfLineChartComponent
   @Input() colorScheme: ColorScheme;
   @Input() sellDateMarkers: LineChartItem[] = [];
   @Input() currency: string;
+  @Input() dateRange: DateRange = DEFAULT_CHART_DATE_RANGE;
   @Input() historicalDataItems: LineChartItem[];
+  @Input() purchaseDate: string;
   @Input() isAnimated = false;
   @Input() label: string;
   @Input() locale = getLocale();
@@ -100,7 +103,6 @@ export class GfLineChartComponent
   public chart: Chart<'line'>;
   public isLoading = true;
 
-  protected dateRange: DateRange = DEFAULT_CHART_DATE_RANGE;
   protected dateRangeOptions: ToggleOption[] = [];
 
   private annotationRevealTimer: ReturnType<typeof setTimeout> | undefined;
@@ -122,6 +124,7 @@ export class GfLineChartComponent
     '5y': '5Y',
     '6m': '6M',
     max: $localize`ALL`,
+    purchase: $localize`Since Purchase`,
     ytd: $localize`YTD`
   };
   private readonly changeFromLastTroughLabel = $localize`From Last Low`;
@@ -222,12 +225,14 @@ export class GfLineChartComponent
 
     this.updateDateRangeOptions();
 
-    const { endIndex, startIndex } = getDateRangeSlice({
-      dateRange: this.dateRange,
-      dates: historicalDataItems.map(({ date }) => {
-        return date;
-      })
+    const dates = historicalDataItems.map(({ date }) => {
+      return date;
     });
+
+    const { endIndex, startIndex } =
+      this.dateRange === 'purchase' && this.purchaseDate
+        ? this.getPurchaseDateSlice(dates)
+        : getDateRangeSlice({ dateRange: this.dateRange, dates });
 
     this.visibleBenchmarkDataItems = benchmarkDataItems.slice(
       startIndex,
@@ -240,12 +245,29 @@ export class GfLineChartComponent
     this.visiblePriceStatistics = priceStatistics.slice(startIndex, endIndex);
   }
 
+  private getPurchaseDateSlice(dates: string[]): DateRangeSlice {
+    const startIndex = dates.findIndex((date) => {
+      return date >= this.purchaseDate;
+    });
+
+    return {
+      endIndex: dates.length,
+      startIndex: startIndex === -1 ? 0 : startIndex
+    };
+  }
+
   private updateDateRangeOptions() {
     const selectableDateRanges = getSelectableDateRanges({
       dates: (this.historicalDataItems ?? []).map(({ date }) => {
         return date;
       })
     });
+
+    if (this.purchaseDate) {
+      // Offer an additional option to restrict the chart to the holding
+      // period, next to the regular date ranges
+      selectableDateRanges.push('purchase');
+    }
 
     this.dateRangeOptions = selectableDateRanges.map((dateRange) => {
       return { label: this.dateRangeLabels[dateRange], value: dateRange };

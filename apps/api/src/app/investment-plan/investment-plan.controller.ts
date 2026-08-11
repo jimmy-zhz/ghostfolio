@@ -73,7 +73,9 @@ export class InvestmentPlanController {
         sipMonthlyBudget: 0,
         subscribeDca: true,
         subscribePriceAlert: true,
-        subscribeRebalancing: true
+        subscribeRebalancing: true,
+        webhookEnabled: false,
+        webhookUrl: null
       };
     }
 
@@ -98,6 +100,8 @@ export class InvestmentPlanController {
       subscribeDca?: boolean;
       subscribePriceAlert?: boolean;
       subscribeRebalancing?: boolean;
+      webhookEnabled?: boolean;
+      webhookUrl?: string;
     }
   ) {
     const result = await this.investmentPlanService.upsertPlan(
@@ -113,27 +117,27 @@ export class InvestmentPlanController {
     return result;
   }
 
-  @Put('allocation/:symbol')
+  @Put('allocation-group')
   @UseGuards(AuthGuard('jwt'))
-  public async upsertAllocation(
-    @Param('symbol') symbol: string,
+  public async upsertAllocationGroup(
     @Body()
-    body: { targetWeight: number; rebalanceThreshold?: number }
+    body: {
+      groupId?: string;
+      name?: string;
+      rebalanceThreshold?: number;
+      symbols: { name?: string; symbol: string }[];
+      targetWeight: number;
+    }
   ) {
     const plan = await this.getOrCreatePlan();
-    return this.investmentPlanService.upsertAllocation(
-      plan.id,
-      symbol,
-      body.targetWeight,
-      body.rebalanceThreshold
-    );
+    return this.investmentPlanService.upsertAllocationGroup(plan.id, body);
   }
 
-  @Delete('allocation/:symbol')
+  @Delete('allocation-group/:groupId')
   @UseGuards(AuthGuard('jwt'))
-  public async deleteAllocation(@Param('symbol') symbol: string) {
+  public async deleteAllocationGroup(@Param('groupId') groupId: string) {
     const plan = await this.getOrCreatePlan();
-    await this.investmentPlanService.deleteAllocation(plan.id, symbol);
+    await this.investmentPlanService.deleteAllocationGroup(plan.id, groupId);
     return { success: true };
   }
 

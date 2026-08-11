@@ -142,6 +142,7 @@ export class GfHoldingDetailDialogComponent implements OnInit {
   protected dataProviderInfo: DataProviderInfo;
   protected dataSource: MatTableDataSource<Activity>;
   protected dateOfFirstActivity: Date;
+  protected dateOfFirstActivityFormatted: string;
   protected dividendInBaseCurrency: number;
   protected dividendInBaseCurrencyPrecision = 2;
   protected dividendYieldPercentWithCurrencyEffect: number;
@@ -329,6 +330,10 @@ export class GfHoldingDetailDialogComponent implements OnInit {
 
           if (dateOfFirstActivity) {
             this.dateOfFirstActivity = dateOfFirstActivity;
+            this.dateOfFirstActivityFormatted = format(
+              this.dateOfFirstActivity,
+              DATE_FORMAT
+            );
           }
 
           this.dividendInBaseCurrency = dividendInBaseCurrency;
@@ -545,6 +550,8 @@ export class GfHoldingDetailDialogComponent implements OnInit {
             this.fetchMarketData();
           }
 
+          this.fetchFullHistoricalData();
+
           this.changeDetectorRef.markForCheck();
         }
       );
@@ -689,6 +696,69 @@ export class GfHoldingDetailDialogComponent implements OnInit {
             date: format(new Date(date), DATE_FORMAT),
             value: unitPrice
           }));
+
+        this.changeDetectorRef.markForCheck();
+      });
+  }
+
+  private fetchFullHistoricalData() {
+    this.dataService
+      .fetchAsset({
+        dataSource: this.data.dataSource,
+        symbol: this.data.symbol
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(({ marketData }) => {
+        const existingDates = new Set(
+          this.historicalDataItems.map(({ date }) => {
+            return date;
+          })
+        );
+
+        // Extend the price history with the data predating the first
+        // activity, so 'ALL' shows the full history of the instrument
+        // instead of being bounded by the holding period
+        const additionalHistoricalDataItems: LineChartItem[] = [];
+        const additionalBenchmarkDataItems: NullableLineChartItem[] = [];
+
+        for (const { date, marketPrice } of marketData) {
+          const formattedDate = format(date, DATE_FORMAT);
+
+          if (!existingDates.has(formattedDate)) {
+            existingDates.add(formattedDate);
+
+            additionalHistoricalDataItems.push({
+              date: formattedDate,
+              value: marketPrice
+            });
+
+            additionalBenchmarkDataItems.push({
+              date: formattedDate,
+              value: null
+            });
+          }
+        }
+
+        if (additionalHistoricalDataItems.length === 0) {
+          return;
+        }
+
+        const byDate = (
+          { date: dateA }: { date: string },
+          { date: dateB }: { date: string }
+        ) => {
+          return dateA < dateB ? -1 : dateA > dateB ? 1 : 0;
+        };
+
+        this.historicalDataItems = [
+          ...this.historicalDataItems,
+          ...additionalHistoricalDataItems
+        ].sort(byDate);
+
+        this.benchmarkDataItems = [
+          ...this.benchmarkDataItems,
+          ...additionalBenchmarkDataItems
+        ].sort(byDate);
 
         this.changeDetectorRef.markForCheck();
       });

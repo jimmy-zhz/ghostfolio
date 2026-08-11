@@ -27,7 +27,9 @@
       [sellDateMarkers]="sellDateMarkers"
       [colorScheme]="data.colorScheme"
       [currency]="assetProfile?.currency"
+      dateRange="max"
       [historicalDataItems]="historicalDataItems"
+      [purchaseDate]="dateOfFirstActivityFormatted"
       [isAnimated]="true"
       [label]="
         isUUID(data.symbol) ? (assetProfile?.name ?? data.symbol) : data.symbol

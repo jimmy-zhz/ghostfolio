@@ -925,12 +925,20 @@ export class DataService {
     return this.http.put<any>('/api/v1/investment-plan', data);
   }
 
-  public putInvestmentPlanAllocation(symbol: string, data: { targetWeight: number; rebalanceThreshold?: number }) {
-    return this.http.put<any>(`/api/v1/investment-plan/allocation/${encodeURIComponent(symbol)}`, data);
+  public putInvestmentPlanAllocationGroup(data: {
+    groupId?: string;
+    name?: string;
+    rebalanceThreshold?: number;
+    symbols: { name?: string; symbol: string }[];
+    targetWeight: number;
+  }) {
+    return this.http.put<any>('/api/v1/investment-plan/allocation-group', data);
   }
 
-  public deleteInvestmentPlanAllocation(symbol: string) {
-    return this.http.delete<any>(`/api/v1/investment-plan/allocation/${encodeURIComponent(symbol)}`);
+  public deleteInvestmentPlanAllocationGroup(groupId: string) {
+    return this.http.delete<any>(
+      `/api/v1/investment-plan/allocation-group/${encodeURIComponent(groupId)}`
+    );
   }
 
   public postInvestmentPlanDca(data: any) {

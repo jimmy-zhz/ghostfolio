@@ -399,6 +399,8 @@ model InvestmentPlan {
   subscribeRebalancing Boolean                   @default(true)
   subscribeDca         Boolean                   @default(true)
   subscribePriceAlert  Boolean                   @default(true)
+  webhookUrl           String?
+  webhookEnabled       Boolean                   @default(false)
   // Capital pool tiers
   cashReserve          Float                     @default(0)
   cashBuffer           Float                     @default(0)
@@ -418,6 +420,8 @@ model InvestmentPlan {
 model InvestmentPlanAllocation {
   id                  String         @id @default(uuid())
   symbol              String
+  groupId             String
+  name                String?
   targetWeight        Float
   rebalanceThreshold  Float          @default(5)
   createdAt           DateTime       @default(now())
@@ -427,6 +431,7 @@ model InvestmentPlanAllocation {
 
   @@unique([planId, symbol])
   @@index([planId])
+  @@index([planId, groupId])
 }
 
 model DcaSchedule {

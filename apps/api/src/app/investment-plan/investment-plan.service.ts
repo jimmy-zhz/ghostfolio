@@ -1,6 +1,8 @@
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 
-import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+
+import { Injectable, Logger } from '@nestjs/common';
 import {
   DcaSchedule,
   InvestmentPlan,
@@ -19,7 +21,23 @@ export type PlanWithRelations = InvestmentPlan & {
 
 @Injectable()
 export class InvestmentPlanService {
+  private readonly logger = new Logger(InvestmentPlanService.name);
+
   public constructor(private readonly prismaService: PrismaService) {}
+
+  public async sendWebhook(webhookUrl: string, payload: Record<string, unknown>): Promise<boolean> {
+    try {
+      const response = await fetch(webhookUrl, {
+        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST'
+      });
+      return response.ok;
+    } catch (error) {
+      this.logger.error(`Failed to send webhook to ${webhookUrl}: ${error}`);
+      return false;
+    }
+  }
 
   public async getPlanByUserId(userId: string): Promise<PlanWithRelations | null> {
     const oneDayAgo = new Date();
@@ -58,6 +76,8 @@ export class InvestmentPlanService {
         subscribeDca: (data.subscribeDca as boolean) ?? true,
         subscribePriceAlert: (data.subscribePriceAlert as boolean) ?? true,
         subscribeRebalancing: (data.subscribeRebalancing as boolean) ?? true,
+        webhookEnabled: (data.webhookEnabled as boolean) ?? false,
+        webhookUrl: data.webhookUrl as string | undefined,
         userId
       },
       update: data,
@@ -65,22 +85,62 @@ export class InvestmentPlanService {
     });
   }
 
-  public async upsertAllocation(
+  public async upsertAllocationGroup(
     planId: string,
-    symbol: string,
-    targetWeight: number,
-    rebalanceThreshold = 5
-  ): Promise<InvestmentPlanAllocation> {
-    return this.prismaService.investmentPlanAllocation.upsert({
-      create: { planId, rebalanceThreshold, symbol, targetWeight },
-      update: { rebalanceThreshold, targetWeight },
-      where: { planId_symbol: { planId, symbol } }
+    params: {
+      groupId?: string;
+      name?: string;
+      rebalanceThreshold?: number;
+      symbols: { name?: string; symbol: string }[];
+      targetWeight: number;
+    }
+  ): Promise<InvestmentPlanAllocation[]> {
+    const groupId = params.groupId ?? randomUUID();
+    const rebalanceThreshold = params.rebalanceThreshold ?? 5;
+    const symbols = params.symbols;
+
+    const groupName =
+      params.name?.trim() ||
+      (symbols.length > 1
+        ? `${symbols[0].name ?? symbols[0].symbol} + others`
+        : (symbols[0].name ?? symbols[0].symbol));
+
+    return this.prismaService.$transaction(async (tx) => {
+      await tx.investmentPlanAllocation.deleteMany({
+        where: {
+          groupId,
+          planId,
+          symbol: { notIn: symbols.map(({ symbol }) => symbol) }
+        }
+      });
+
+      return Promise.all(
+        symbols.map(({ symbol }) =>
+          tx.investmentPlanAllocation.upsert({
+            create: {
+              groupId,
+              planId,
+              rebalanceThreshold,
+              symbol,
+              targetWeight: params.targetWeight,
+              name: groupName
+            },
+            update: {
+              groupId,
+              rebalanceThreshold,
+              targetWeight: params.targetWeight,
+              name: groupName
+            },
+            where: { planId_symbol: { planId, symbol } }
+          })
+        )
+      );
     });
   }
 
-  public async deleteAllocation(planId: string, symbol: string): Promise<void> {
+  public async deleteAllocationGroup(planId: string, groupId: string): Promise<void> {
     await this.prismaService.investmentPlanAllocation.deleteMany({
-      where: { planId, symbol }
+      where: { groupId, planId }
     });
   }
 

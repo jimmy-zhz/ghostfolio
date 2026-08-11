@@ -9,8 +9,10 @@ export interface RebalancingAction {
   currentWeight: number;
   currentValue: number;
   deviation: number;
+  groupId: string;
+  name: string;
   reason: string;
-  symbol: string;
+  symbols: string[];
   targetWeight: number;
   type: 'BUY' | 'SELL' | 'OK';
 }
@@ -49,16 +51,29 @@ export class RebalancingService {
     const actions: RebalancingAction[] = [];
     let hasTriggered = false;
 
+    const groups = new Map<string, InvestmentPlanAllocation[]>();
     for (const allocation of allocations) {
-      const holding = holdings[allocation.symbol];
-      const currentValue = holding?.valueInBaseCurrency ?? 0;
+      const group = groups.get(allocation.groupId) ?? [];
+      group.push(allocation);
+      groups.set(allocation.groupId, group);
+    }
+
+    for (const [groupId, group] of groups) {
+      const { targetWeight, rebalanceThreshold } = group[0];
+      const symbols = group.map(({ symbol }) => symbol);
+      const name = group[0].name || symbols.join(', ');
+
+      const currentValue = symbols.reduce(
+        (sum, symbol) => sum + (holdings[symbol]?.valueInBaseCurrency ?? 0),
+        0
+      );
       // Current weight is always relative to the target base (longTermGrowthTarget)
       const currentWeight = (currentValue / totalValue) * 100;
-      const deviation = currentWeight - allocation.targetWeight;
-      const adjustmentValue = (totalValue * (allocation.targetWeight - currentWeight)) / 100;
+      const deviation = currentWeight - targetWeight;
+      const adjustmentValue = (totalValue * (targetWeight - currentWeight)) / 100;
 
       let type: 'BUY' | 'SELL' | 'OK' = 'OK';
-      if (Math.abs(deviation) >= allocation.rebalanceThreshold) {
+      if (Math.abs(deviation) >= rebalanceThreshold) {
         type = adjustmentValue > 0 ? 'BUY' : 'SELL';
         hasTriggered = true;
       }
@@ -68,9 +83,11 @@ export class RebalancingService {
         currentValue,
         currentWeight,
         deviation,
-        reason: this.buildReason(allocation.symbol, currentWeight, allocation.targetWeight, deviation),
-        symbol: allocation.symbol,
-        targetWeight: allocation.targetWeight,
+        groupId,
+        name,
+        reason: this.buildReason(name, currentWeight, targetWeight, deviation),
+        symbols,
+        targetWeight,
         type
       });
     }
@@ -94,11 +111,13 @@ export class RebalancingService {
     for (const action of result.actions) {
       if (action.type === 'OK') continue;
 
+      const symbol = action.symbols.join(', ');
+
       const existing = await this.prismaService.investmentSignal.findFirst({
         where: {
           date: { gte: startOfWeek },
           planId,
-          symbol: action.symbol,
+          symbol,
           type: action.type === 'BUY' ? SignalType.REBALANCE_BUY : SignalType.REBALANCE_SELL
         }
       });
@@ -110,7 +129,7 @@ export class RebalancingService {
           date: new Date(),
           planId,
           reason: action.reason,
-          symbol: action.symbol,
+          symbol,
           type: action.type === 'BUY' ? SignalType.REBALANCE_BUY : SignalType.REBALANCE_SELL
         }
       });

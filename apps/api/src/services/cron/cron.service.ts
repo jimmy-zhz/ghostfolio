@@ -150,8 +150,8 @@ export class CronService {
         }
       }
 
-      // 3. Send email with all pending actionable signals
-      if (plan.emailEnabled && plan.notifyEmail) {
+      // 3. Send email / webhook with all pending actionable signals
+      if ((plan.emailEnabled && plan.notifyEmail) || (plan.webhookEnabled && plan.webhookUrl)) {
         const signals = await this.investmentPlanService.getPendingSignals(plan.id);
         const actionableSignals = signals.filter((s) => {
           if (s.type === 'DCA_WAIT' || s.emailSent) {
@@ -188,14 +188,26 @@ export class CronService {
             }));
           } catch {}
 
-          const mailService = await this.resolveRequestScoped(MailService, plan.userId);
-          const sent = await mailService.sendInvestmentSignalEmail(
-            plan.notifyEmail,
-            actionableSignals,
-            portfolioSummary
-          );
+          let emailSent = false;
+          if (plan.emailEnabled && plan.notifyEmail) {
+            const mailService = await this.resolveRequestScoped(MailService, plan.userId);
+            emailSent = await mailService.sendInvestmentSignalEmail(
+              plan.notifyEmail,
+              actionableSignals,
+              portfolioSummary
+            );
+          }
 
-          if (sent) {
+          let webhookSent = false;
+          if (plan.webhookEnabled && plan.webhookUrl) {
+            webhookSent = await this.investmentPlanService.sendWebhook(plan.webhookUrl, {
+              event: 'investment_signals',
+              planId: plan.id,
+              signals: actionableSignals
+            });
+          }
+
+          if (emailSent || webhookSent) {
             await this.investmentPlanService.markSignalsEmailSent(
               actionableSignals.map((s) => s.id)
             );

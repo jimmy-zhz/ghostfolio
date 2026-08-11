@@ -5,7 +5,7 @@ import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { AlertCondition, PriceAlert, Prisma } from '@prisma/client';
 
-import { PlanWithRelations } from './investment-plan.service';
+import { InvestmentPlanService, PlanWithRelations } from './investment-plan.service';
 
 @Injectable()
 export class PriceAlertService {
@@ -13,6 +13,7 @@ export class PriceAlertService {
 
   public constructor(
     private readonly dataProviderService: DataProviderService,
+    private readonly investmentPlanService: InvestmentPlanService,
     private readonly prismaService: PrismaService
   ) {}
 
@@ -49,8 +50,8 @@ export class PriceAlertService {
   ): Promise<void> {
     const eligiblePlans = plans.filter(
       (plan) =>
-        plan.emailEnabled &&
-        plan.notifyEmail &&
+        ((plan.emailEnabled && plan.notifyEmail) ||
+          (plan.webhookEnabled && plan.webhookUrl)) &&
         plan.subscribePriceAlert &&
         plan.priceAlerts?.some((alert) => alert.isActive)
     );
@@ -114,13 +115,26 @@ export class PriceAlertService {
         }
 
         try {
-          const sent = await mailService.sendPriceAlertEmail(
-            plan.notifyEmail,
-            alert,
-            currentValue
-          );
+          let emailSent = false;
+          if (plan.emailEnabled && plan.notifyEmail) {
+            emailSent = await mailService.sendPriceAlertEmail(
+              plan.notifyEmail,
+              alert,
+              currentValue
+            );
+          }
 
-          if (sent) {
+          let webhookSent = false;
+          if (plan.webhookEnabled && plan.webhookUrl) {
+            webhookSent = await this.investmentPlanService.sendWebhook(plan.webhookUrl, {
+              alert,
+              currentValue,
+              event: 'price_alert',
+              planId: plan.id
+            });
+          }
+
+          if (emailSent || webhookSent) {
             await this.prismaService.priceAlert.update({
               data: {
                 isActive: false,
@@ -129,15 +143,15 @@ export class PriceAlertService {
               },
               where: { id: alert.id }
             });
-            this.logger.log(`Price alert email sent for ${alert.symbol}, alert deactivated`);
+            this.logger.log(`Price alert notified for ${alert.symbol}, alert deactivated`);
           } else {
             this.logger.warn(
-              `sendPriceAlertEmail returned false for ${alert.symbol} (check SMTP_USER config)`
+              `Price alert notification failed for ${alert.symbol} (check SMTP_USER/webhook config)`
             );
           }
         } catch (error) {
           this.logger.error(
-            `Failed to send price alert email for ${alert.symbol}: ${error}`
+            `Failed to send price alert notification for ${alert.symbol}: ${error}`
           );
         }
       }
