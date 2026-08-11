@@ -219,10 +219,6 @@ export class CronService {
 
   @Cron('*/10 * * * *')
   public async runPriceAlertsCheck() {
-    if (!this.isWithinExtendedCanadianTradingHours()) {
-      return;
-    }
-
     const plans = await this.investmentPlanService.getAllActivePlans();
 
     if (plans.length === 0) {
@@ -231,33 +227,6 @@ export class CronService {
 
     const mailService = await this.resolveRequestScoped(MailService, plans[0].userId);
     await this.priceAlertService.checkAndTriggerAlertsForPlans(plans, mailService);
-  }
-
-  /**
-   * TSX/NYSE regular session is 9:30–16:00 America/Toronto. Widened by ±1h
-   * here to absorb DST/timezone edge cases without adding a real calendar.
-   */
-  private isWithinExtendedCanadianTradingHours(): boolean {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      hour: 'numeric',
-      hour12: false,
-      minute: 'numeric',
-      timeZone: 'America/Toronto',
-      weekday: 'short'
-    }).formatToParts(new Date());
-
-    const weekday = parts.find((p) => p.type === 'weekday')?.value;
-    const hour = Number(parts.find((p) => p.type === 'hour')?.value);
-    const minute = Number(parts.find((p) => p.type === 'minute')?.value);
-
-    const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(weekday);
-    const minutesSinceMidnight = hour * 60 + minute;
-
-    return (
-      isWeekday &&
-      minutesSinceMidnight >= 8 * 60 + 30 &&
-      minutesSinceMidnight <= 17 * 60
-    );
   }
 
   private async isDataGatheringEnabled() {
