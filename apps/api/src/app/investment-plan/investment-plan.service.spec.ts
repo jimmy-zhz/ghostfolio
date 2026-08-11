@@ -22,12 +22,18 @@ describe('InvestmentPlanService.sendWebhook', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://example.com/webhook', {
       body: JSON.stringify(payload),
       headers: { 'Content-Type': 'application/json' },
-      method: 'POST'
+      method: 'POST',
+      signal: expect.any(AbortSignal)
     });
   });
 
   it('returns false when the endpoint responds with a non-2xx status', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false }) as any;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      text: jest.fn().mockResolvedValue('not found')
+    }) as any;
 
     const result = await svc.sendWebhook('https://example.com/webhook', {});
 

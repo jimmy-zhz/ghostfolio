@@ -30,9 +30,20 @@ export class InvestmentPlanService {
       const response = await fetch(webhookUrl, {
         body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' },
-        method: 'POST'
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
       });
-      return response.ok;
+
+      if (!response.ok) {
+        const responseBody = await response.text().catch(() => '');
+        this.logger.error(
+          `Webhook to ${webhookUrl} returned ${response.status} ${response.statusText}: ${responseBody.slice(0, 500)}`
+        );
+        return false;
+      }
+
+      this.logger.log(`Webhook delivered to ${webhookUrl} (${payload.event})`);
+      return true;
     } catch (error) {
       this.logger.error(`Failed to send webhook to ${webhookUrl}: ${error}`);
       return false;

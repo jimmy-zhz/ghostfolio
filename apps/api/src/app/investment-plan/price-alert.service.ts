@@ -139,6 +139,10 @@ export class PriceAlertService {
               event: 'price_alert',
               planId: plan.id
             });
+          } else {
+            this.logger.warn(
+              `Webhook skipped for ${alert.symbol}: webhookEnabled=${plan.webhookEnabled}, webhookUrl=${plan.webhookUrl ? 'set' : 'empty'}`
+            );
           }
 
           if (emailSent || webhookSent) {
