@@ -107,6 +107,8 @@ export class GfLineChartComponent
 
   private annotationRevealTimer: ReturnType<typeof setTimeout> | undefined;
   private hasRendered = false;
+  private hasUserSelectedDateRange = false;
+  private preferredDateRange: DateRange | undefined;
   private tooltipElement: HTMLDivElement | undefined;
   private visibleBenchmarkDataItems: LineChartItem[] = [];
   private visibleHistoricalDataItems: LineChartItem[] = [];
@@ -160,6 +162,13 @@ export class GfLineChartComponent
   }
 
   public ngOnChanges(changes: SimpleChanges) {
+    if (changes['dateRange']) {
+      // Remember the requested date range, as it may not be selectable yet
+      // while the historical data is still loading
+      this.preferredDateRange = this.dateRange;
+      this.hasUserSelectedDateRange = false;
+    }
+
     if (changes['historicalDataItems']) {
       this.hasRendered = false;
 
@@ -187,6 +196,7 @@ export class GfLineChartComponent
 
   protected onDateRangeChange(dateRange: DateRange) {
     this.dateRange = dateRange;
+    this.hasUserSelectedDateRange = true;
 
     this.dateRangeChange.emit(dateRange);
 
@@ -269,9 +279,21 @@ export class GfLineChartComponent
       selectableDateRanges.push('purchase');
     }
 
+    // Capture the requested date range before any fallback overrules it
+    this.preferredDateRange ??= this.dateRange;
+
     this.dateRangeOptions = selectableDateRanges.map((dateRange) => {
       return { label: this.dateRangeLabels[dateRange], value: dateRange };
     });
+
+    if (
+      !this.hasUserSelectedDateRange &&
+      selectableDateRanges.includes(this.preferredDateRange)
+    ) {
+      // Restore the requested date range as soon as it becomes selectable, so
+      // it does not stay overruled by the fallback applied while loading
+      this.dateRange = this.preferredDateRange;
+    }
 
     if (!selectableDateRanges.includes(this.dateRange)) {
       // Fall back to the shortest date range with data
