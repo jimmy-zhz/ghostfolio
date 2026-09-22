@@ -7,7 +7,9 @@ import {
   DEFAULT_DATE_RANGE,
   NUMERICAL_PRECISION_THRESHOLD_6_FIGURES
 } from '@ghostfolio/common/config';
+import { DATE_FORMAT } from '@ghostfolio/common/helper';
 import {
+  Activity,
   AssetProfileIdentifier,
   LineChartItem,
   PortfolioPerformance,
@@ -18,6 +20,7 @@ import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { GfLineChartComponent } from '@ghostfolio/ui/line-chart';
 import { DataService } from '@ghostfolio/ui/services';
 
+import { CommonModule } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -27,11 +30,11 @@ import {
   OnInit,
   signal
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { RouterModule } from '@angular/router';
+import { format, parseISO } from 'date-fns';
 import { DeviceDetectorService } from 'ngx-device-detector';
 import { catchError, of } from 'rxjs';
 
@@ -50,6 +53,7 @@ import { catchError, of } from 'rxjs';
   templateUrl: './home-overview.html'
 })
 export class GfHomeOverviewComponent implements OnInit {
+  protected readonly buyDateMarkers = signal<LineChartItem[]>([]);
   protected readonly errors = signal<AssetProfileIdentifier[]>([]);
   protected readonly hasImpersonationId = signal(false);
   protected readonly historicalDataItems = signal<LineChartItem[] | null>(null);
@@ -58,6 +62,7 @@ export class GfHomeOverviewComponent implements OnInit {
   protected readonly performance = signal<PortfolioPerformance | null>(null);
   protected readonly performanceLabel = $localize`Performance`;
   protected readonly precision = signal(2);
+  protected readonly sellDateMarkers = signal<LineChartItem[]>([]);
   protected readonly user = signal<User | null>(null);
 
   protected readonly routerLinkAccounts = internalRoutes.accounts.routerLink;
@@ -116,7 +121,9 @@ export class GfHomeOverviewComponent implements OnInit {
       )
       .subscribe(({ signals }) => {
         this.investmentSignals.set(
-          signals.filter((s: any) => s.status === 'PENDING' && s.type !== 'DCA_WAIT')
+          signals.filter(
+            (s: any) => s.status === 'PENDING' && s.type !== 'DCA_WAIT'
+          )
         );
       });
 
@@ -137,6 +144,8 @@ export class GfHomeOverviewComponent implements OnInit {
   private update() {
     this.historicalDataItems.set(null);
     this.isLoadingPerformance.set(true);
+
+    this.fetchDateMarkers();
 
     this.dataService
       .fetchPortfolioPerformance({
@@ -171,5 +180,58 @@ export class GfHomeOverviewComponent implements OnInit {
 
         this.isLoadingPerformance.set(false);
       });
+  }
+
+  /**
+   * Aggregates the buy and sell activities of the selected date range per day,
+   * so the chart can render one marker per day sized by the traded amount
+   */
+  private fetchDateMarkers() {
+    this.dataService
+      .fetchActivities({
+        activityTypes: ['BUY', 'SELL'],
+        range: this.user()?.settings?.dateRange ?? DEFAULT_DATE_RANGE
+      })
+      .pipe(
+        catchError(() => of({ activities: [] })),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ activities }) => {
+        this.buyDateMarkers.set(
+          this.aggregateActivitiesByDate(
+            activities.filter(({ type }) => {
+              return type === 'BUY';
+            })
+          )
+        );
+
+        this.sellDateMarkers.set(
+          this.aggregateActivitiesByDate(
+            activities.filter(({ type }) => {
+              return type === 'SELL';
+            })
+          )
+        );
+      });
+  }
+
+  private aggregateActivitiesByDate(activities: Activity[]): LineChartItem[] {
+    const amountByDate = new Map<string, number>();
+
+    for (const { date, valueInBaseCurrency } of activities) {
+      const dateString = format(
+        typeof date === 'string' ? parseISO(date) : date,
+        DATE_FORMAT
+      );
+
+      amountByDate.set(
+        dateString,
+        (amountByDate.get(dateString) ?? 0) + (valueInBaseCurrency ?? 0)
+      );
+    }
+
+    return [...amountByDate.entries()].map(([date, amount]) => {
+      return { amount, date, value: amount };
+    });
   }
 }
