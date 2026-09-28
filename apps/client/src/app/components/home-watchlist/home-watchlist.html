@@ -15,6 +15,7 @@
         [hasPermissionToDeleteItem]="hasPermissionToDeleteWatchlistItem"
         [locale]="user?.settings?.locale || undefined"
         [showIcon]="true"
+        [showMarketPrice]="true"
         [user]="user"
         (itemDeleted)="onWatchlistItemDeleted($event)"
       />

@@ -68,6 +68,7 @@ export class GfBenchmarkComponent {
   public readonly hasPermissionToDeleteItem = input<boolean>();
   public readonly locale = input(getLocale());
   public readonly showIcon = input(false);
+  public readonly showMarketPrice = input(false);
   public readonly showSymbol = input(true);
   public readonly user = input<User>();
 
@@ -80,6 +81,7 @@ export class GfBenchmarkComponent {
     return [
       ...(this.showIcon() ? ['icon'] : []),
       'name',
+      ...(this.showMarketPrice() ? ['marketPrice'] : []),
       ...(this.user()?.settings?.isExperimentalFeatures
         ? ['trend50d', 'trend200d']
         : []),

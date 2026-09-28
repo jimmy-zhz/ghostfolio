@@ -123,18 +123,21 @@ export class WatchlistService {
           this.benchmarkService.getBenchmarkTrends({ dataSource, symbol })
         ]);
 
+        const quote = quotes[getAssetProfileIdentifier({ dataSource, symbol })];
+
         const performancePercent =
           this.benchmarkService.calculateChangeInPercentage(
             allTimeHigh?.marketPrice,
-            quotes[getAssetProfileIdentifier({ dataSource, symbol })]
-              ?.marketPrice
+            quote?.marketPrice
           );
 
         return {
           dataSource,
           symbol,
+          currency: quote?.currency ?? assetProfile?.currency,
           marketCondition:
             this.benchmarkService.getMarketCondition(performancePercent),
+          marketPrice: quote?.marketPrice,
           name: assetProfile?.name,
           performances: {
             allTimeHigh: {

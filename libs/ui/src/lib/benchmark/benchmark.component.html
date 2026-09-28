@@ -34,6 +34,23 @@
       </td>
     </ng-container>
 
+    <ng-container matColumnDef="marketPrice">
+      <th *matHeaderCellDef class="px-1 text-right" mat-header-cell>
+        <ng-container i18n>Market Price</ng-container>
+      </th>
+      <td *matCellDef="let element" class="px-1 text-right" mat-cell>
+        @if (isNumber(element?.marketPrice)) {
+          <gf-value
+            class="d-inline-block justify-content-end"
+            [isCurrency]="true"
+            [locale]="locale()"
+            [unit]="element?.currency"
+            [value]="element?.marketPrice"
+          />
+        }
+      </td>
+    </ng-container>
+
     <ng-container matColumnDef="trend50d">
       <th
         *matHeaderCellDef
