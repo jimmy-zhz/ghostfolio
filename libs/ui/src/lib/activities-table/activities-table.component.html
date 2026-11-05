@@ -181,10 +181,14 @@
     </ng-container>
 
     <ng-container matColumnDef="nameWithSymbol">
-      <th *matHeaderCellDef class="px-1" mat-header-cell>
+      <th *matHeaderCellDef class="d-none d-lg-table-cell px-1" mat-header-cell>
         <ng-container i18n>Name</ng-container>
       </th>
-      <td *matCellDef="let element" class="line-height-normal px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell line-height-normal px-1"
+        mat-cell
+      >
         <div class="align-items-center d-flex text-nowrap">
           <span class="text-truncate">{{ element.assetProfile?.name }}</span>
           @if (isDraftActivity(element)) {
@@ -205,19 +209,37 @@
     </ng-container>
 
     <ng-container matColumnDef="type">
-      <th *matHeaderCellDef class="px-1" mat-header-cell mat-sort-header>
+      <th
+        *matHeaderCellDef
+        class="d-none d-lg-table-cell px-1"
+        mat-header-cell
+        mat-sort-header
+      >
         <ng-container i18n>Type</ng-container>
       </th>
-      <td *matCellDef="let element" class="px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
         <gf-activity-type [activityType]="element.type" />
       </td>
     </ng-container>
 
     <ng-container matColumnDef="date">
-      <th *matHeaderCellDef class="px-1" mat-header-cell mat-sort-header>
+      <th
+        *matHeaderCellDef
+        class="d-none d-lg-table-cell px-1"
+        mat-header-cell
+        mat-sort-header
+      >
         <ng-container i18n>Date</ng-container>
       </th>
-      <td *matCellDef="let element" class="px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
         <div class="d-flex">
           <gf-value
             [deviceType]="deviceType"
@@ -342,31 +364,180 @@
       </td>
     </ng-container>
 
-    <ng-container matColumnDef="valueInBaseCurrency">
-      <th
-        *matHeaderCellDef
-        class="d-lg-none d-xl-none px-1 text-end"
-        mat-header-cell
-      >
-        <ng-container i18n>Value</ng-container>
+    <!-- Replaces the columns hidden on small screens -->
+    <ng-container matColumnDef="mobileSummary">
+      <th *matHeaderCellDef class="d-lg-none px-1" mat-header-cell>
+        <ng-container i18n>Activity</ng-container>
       </th>
-      <td *matCellDef="let element" class="d-lg-none d-xl-none px-1" mat-cell>
-        <div class="d-flex justify-content-end">
+      <td
+        *matCellDef="let element"
+        class="d-lg-none line-height-normal px-1 py-2"
+        mat-cell
+      >
+        <div class="align-items-center d-flex gap-2">
+          <gf-activity-type
+            class="flex-shrink-0"
+            [activityType]="element.type"
+          />
           <gf-value
+            class="flex-shrink-0"
+            [deviceType]="deviceType"
+            [isDate]="true"
+            [isLoading]="isLoading()"
+            [locale]="locale"
+            [value]="element.date"
+          />
+          @if (showNameColumn()) {
+            <span class="text-truncate">{{ element.assetProfile?.name }}</span>
+          }
+          @if (isDraftActivity(element)) {
+            <span class="badge bg-secondary flex-shrink-0" i18n>Draft</span>
+          }
+          <gf-value
+            class="flex-shrink-0 ms-auto"
             [isCurrency]="true"
             [isLoading]="isLoading()"
             [locale]="locale"
             [value]="element.valueInBaseCurrency"
           />
         </div>
+        <small class="d-block mt-1 text-body-secondary">{{
+          getSummary(element)
+        }}</small>
+        @if (element.comment && element !== expandedActivity()) {
+          <small class="d-block text-body-secondary text-truncate">
+            <ion-icon class="me-1" name="document-text-outline" />{{
+              element.comment
+            }}
+          </small>
+        }
+        @if (element === expandedActivity()) {
+          <div class="mt-2" (click)="$event.stopPropagation()">
+            <dl class="activity-details mb-2">
+              @if (showNameColumn()) {
+                <dt class="fw-normal text-body-secondary" i18n>Name</dt>
+                <dd>
+                  {{ element.assetProfile?.name }}
+                  @if (
+                    element.assetProfile?.dataSource !== 'MANUAL' &&
+                    !isUUID(element.assetProfile?.symbol)
+                  ) {
+                    <small class="text-body-secondary">{{
+                      element.assetProfile?.symbol
+                    }}</small>
+                  }
+                </dd>
+              }
+              <dt class="fw-normal text-body-secondary" i18n>Quantity</dt>
+              <dd>
+                <gf-value
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [value]="element.quantity"
+                />
+              </dd>
+              <dt class="fw-normal text-body-secondary" i18n>Unit Price</dt>
+              <dd>
+                <gf-value
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="element.currency ?? element.assetProfile?.currency"
+                  [value]="element.unitPrice"
+                />
+              </dd>
+              <dt class="fw-normal text-body-secondary" i18n>Fee</dt>
+              <dd>
+                <gf-value
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="element.currency ?? element.assetProfile?.currency"
+                  [value]="element.fee"
+                />
+              </dd>
+              <dt class="fw-normal text-body-secondary" i18n>Value</dt>
+              <dd>
+                <gf-value
+                  [isCurrency]="true"
+                  [locale]="locale"
+                  [unit]="element.currency ?? element.assetProfile?.currency"
+                  [value]="element.value"
+                />
+                @if (
+                  baseCurrency &&
+                  baseCurrency !==
+                    (element.currency ?? element.assetProfile?.currency)
+                ) {
+                  <gf-value
+                    [isCurrency]="true"
+                    [locale]="locale"
+                    [unit]="baseCurrency"
+                    [value]="element.valueInBaseCurrency"
+                  />
+                }
+              </dd>
+              @if (element.account) {
+                <dt class="fw-normal text-body-secondary" i18n>Account</dt>
+                <dd>{{ element.account.name }}</dd>
+              }
+              @if (element.tags?.length) {
+                <dt class="fw-normal text-body-secondary" i18n>Tags</dt>
+                <dd>{{ getTagNames(element) }}</dd>
+              }
+              @if (element.comment) {
+                <dt class="fw-normal text-body-secondary" i18n>Note</dt>
+                <dd class="text-break">{{ element.comment }}</dd>
+              }
+            </dl>
+            <div class="d-flex flex-wrap gap-2">
+              @if (canClickActivity(element)) {
+                <button mat-stroked-button (click)="onViewHolding(element)">
+                  <ng-container i18n>View Holding</ng-container>...
+                </button>
+              }
+              @if (showActions) {
+                @if (hasPermissionToUpdateActivity && element.id) {
+                  <a
+                    mat-stroked-button
+                    [routerLink]="
+                      activityDialogRouterLinks().get(element.id)?.update
+                    "
+                    ><ng-container i18n>Edit</ng-container>...</a
+                  >
+                }
+                @if (hasPermissionToCreateActivity && element.id) {
+                  <a
+                    mat-stroked-button
+                    [routerLink]="
+                      activityDialogRouterLinks().get(element.id)?.clone
+                    "
+                    ><ng-container i18n>Clone</ng-container>...</a
+                  >
+                }
+                @if (hasPermissionToDeleteActivity && element.id) {
+                  <button
+                    color="warn"
+                    mat-stroked-button
+                    (click)="onDeleteActivity(element.id)"
+                  >
+                    <ng-container i18n>Delete</ng-container>
+                  </button>
+                }
+              }
+            </div>
+          </div>
+        }
       </td>
     </ng-container>
 
     <ng-container matColumnDef="account">
-      <th *matHeaderCellDef class="px-1" mat-header-cell>
+      <th *matHeaderCellDef class="d-none d-lg-table-cell px-1" mat-header-cell>
         <span class="d-none d-lg-block" i18n>Account</span>
       </th>
-      <td *matCellDef="let element" class="px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
         <div class="d-flex">
           <gf-entity-logo
             class="me-1"
@@ -498,7 +669,7 @@
           xPosition="before"
         >
           @if (canClickActivity(element)) {
-            <button mat-menu-item (click)="onClickActivity(element)">
+            <button mat-menu-item (click)="onViewHolding(element)">
               <span class="align-items-center d-flex">
                 <ion-icon class="me-2" name="tablet-landscape-outline" />
                 <span><ng-container i18n>View Holding</ng-container>...</span>
@@ -558,7 +729,7 @@
     <tr
       *matRowDef="let row; columns: displayedColumns()"
       mat-row
-      [class.cursor-pointer]="canClickActivity(row)"
+      [class.cursor-pointer]="canClickActivity(row) || isSmallScreen()"
       (click)="onClickActivity(row)"
     ></tr>
   </table>
