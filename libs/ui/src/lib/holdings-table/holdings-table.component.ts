@@ -27,6 +27,7 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 
 import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
+import { getHoldingSummary } from '../shared/mobile-summary';
 import { GfValueComponent } from '../value/value.component';
 import { HoldingsTableItem } from './interfaces/interfaces';
 
@@ -154,6 +155,23 @@ export class GfHoldingsTableComponent {
     return element?.investment
       ? (element.netPerformanceWithCurrencyEffect ?? 0) / element.investment
       : undefined;
+  }
+
+  protected getSummary({
+    allocationInPercentage,
+    assetProfile,
+    quantity,
+    valueInBaseCurrency
+  }: HoldingsTableItem) {
+    return getHoldingSummary({
+      allocationInPercentage,
+      quantity,
+      valueInBaseCurrency,
+      hasPermissionToShowQuantities: this.hasPermissionToShowQuantities(),
+      hasPermissionToShowValues: this.hasPermissionToShowValues(),
+      locale: this.locale(),
+      symbol: assetProfile.symbol
+    });
   }
 
   protected onOpenHoldingDialog({
