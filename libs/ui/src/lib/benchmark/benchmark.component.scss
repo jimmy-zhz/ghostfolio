@@ -1,3 +1,12 @@
 :host {
   display: block;
+
+  // On small screens the name takes the remaining width and gets truncated,
+  // instead of a long name widening the table
+  @media (max-width: 991.98px) {
+    .gf-table .mat-column-name {
+      max-width: 0;
+      width: 100%;
+    }
+  }
 }
