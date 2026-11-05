@@ -13,7 +13,7 @@
 - “小屏”即 Bootstrap 的 `lg` 断点以下（< 992px），和原来隐藏列用的断点一致。
 - 小屏把次要字段合并到第二行（次要样式），不靠横向滚动。
 - 桌面（lg 及以上）布局保持现状：新加的内容一律 `d-lg-none`，隐藏的列一律 `d-none d-lg-table-cell`。
-- 第二行的文字由 `libs/ui/src/lib/shared/mobile-summary.ts` 拼接（纯函数，有单元测试），分隔符 ` · `。
+- 第二行的文字由 `libs/ui/src/lib/shared/mobile-summary.ts` 拼接（纯函数，有单元测试），分隔符是中点 `·`，两侧各一个空格。
 
 ## 3. 需求与方案
 
@@ -47,12 +47,12 @@
 名称/代码、数量、单价、手续费、金额（交易币种；与基础货币不同时再列基础货币金额）、账户、标签、备注。
 下面是操作按钮，权限判断沿用原来的菜单：
 
-| 按钮 | 条件 |
-| --- | --- |
+| 按钮                     | 条件                                                                       |
+| ------------------------ | -------------------------------------------------------------------------- |
 | 查看持仓（View Holding） | `canClickActivity`（买入/卖出/分红、非草稿、`hasPermissionToOpenDetails`） |
-| 编辑 | `showActions && hasPermissionToUpdateActivity` |
-| 复制 | `showActions && hasPermissionToCreateActivity` |
-| 删除 | `showActions && hasPermissionToDeleteActivity` |
+| 编辑                     | `showActions && hasPermissionToUpdateActivity`                             |
+| 复制                     | `showActions && hasPermissionToCreateActivity`                             |
+| 删除                     | `showActions && hasPermissionToDeleteActivity`                             |
 
 - “点一行打开持仓弹窗”的入口在小屏移到了详情里的“查看持仓”按钮；桌面点行仍直接打开持仓弹窗。
 - 行尾的 `…` 菜单在小屏保留（含导出草稿 ICS 等）；菜单里“查看持仓”改为直接打开持仓，不受小屏展开逻辑影响。
