@@ -34,6 +34,20 @@ describe('mobile-summary', () => {
       ).toBe('10.5 × 123.46 USD · Fee 1.20 · Broker');
     });
 
+    it('leaves out an account without a name', () => {
+      expect(
+        getActivitySummary({
+          account: null,
+          currency: 'USD',
+          fee: 0,
+          feeLabel: 'Fee',
+          locale: 'en-US',
+          quantity: 1,
+          unitPrice: 100
+        })
+      ).toBe('1 × 100.00 USD');
+    });
+
     it('leaves out a zero fee and a missing account', () => {
       expect(
         getActivitySummary({

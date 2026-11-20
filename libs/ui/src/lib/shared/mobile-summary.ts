@@ -39,7 +39,7 @@ export function getActivitySummary({
   quantity,
   unitPrice
 }: {
-  account?: string;
+  account?: string | null;
   currency?: string;
   fee?: number | null;
   feeLabel: string;
