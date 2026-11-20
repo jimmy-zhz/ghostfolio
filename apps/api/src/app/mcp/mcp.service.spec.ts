@@ -155,6 +155,8 @@ describe('McpService', () => {
     ).toEqual([
       'delete_price_alert',
       'delete_dca_schedule',
+      // Replacing a group removes the symbols left out
+      'upsert_allocation_group',
       'delete_allocation_group'
     ]);
     expect(
@@ -242,6 +244,25 @@ describe('McpService', () => {
     expect(received[0].method).toBe('PUT');
     expect(received[0].url).toBe('/api/v1/investment-plan/allocation-group');
     expect(JSON.parse(body)).toEqual(args);
+  });
+
+  it('rejects an invalid date or data source before calling the API', async () => {
+    const invalidDate = await client.callTool({
+      arguments: {
+        startDate: 'next friday',
+        symbol: 'XEF.TO',
+        weeklyBudget: 100
+      },
+      name: 'create_dca_schedule'
+    });
+    const invalidDataSource = await client.callTool({
+      arguments: { dataSource: 'NASDAQ', id: ALERT_ID },
+      name: 'update_price_alert'
+    });
+
+    expect(invalidDate.isError).toBe(true);
+    expect(invalidDataSource.isError).toBe(true);
+    expect(received).toHaveLength(0);
   });
 
   it('rejects an id that is not a UUID before calling the API', async () => {

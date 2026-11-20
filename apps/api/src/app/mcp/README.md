@@ -34,9 +34,13 @@ plan.
   consequences (no undo, rebalancing and alerts change). `create_activity`
   additionally checks `list_activities` for duplicates; tools that change an
   existing item take its id from `get_investment_plan`.
-- **Annotations:** writes have `readOnlyHint: false`, deletes
-  `destructiveHint: true`; creates and `upsert_allocation_group` are not
+- **Annotations:** writes have `readOnlyHint: false`; deletes and
+  `upsert_allocation_group` (replacing a group removes the symbols left out)
+  have `destructiveHint: true`; creates and `upsert_allocation_group` are not
   idempotent.
+- **Arguments are validated before the API is called:** ids are UUIDs (except
+  `groupId`), dates are `YYYY-MM-DD` and `dataSource` is one of the data
+  sources of Ghostfolio.
 - **Ids are scoped by the API:** updates and deletes by id only find a record
   of the plan of the signed-in user (`404` otherwise), and the update endpoints
   only take the editable fields of the record.

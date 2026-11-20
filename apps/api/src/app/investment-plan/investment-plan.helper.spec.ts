@@ -1,7 +1,26 @@
+import { BadRequestException } from '@nestjs/common';
+
 import {
+  assertAllocationGroupSymbols,
   toDcaScheduleUpdate,
   toPriceAlertUpdate
 } from './investment-plan.helper';
+
+describe('assertAllocationGroupSymbols', () => {
+  it('accepts a list of symbols', () => {
+    expect(() =>
+      assertAllocationGroupSymbols([{ symbol: 'XEF.TO' }, { symbol: 'XEC.TO' }])
+    ).not.toThrow();
+  });
+
+  it('rejects an empty or invalid list', () => {
+    for (const symbols of [undefined, [], [{}], [{ symbol: '' }], 'XEF.TO']) {
+      expect(() => assertAllocationGroupSymbols(symbols)).toThrow(
+        BadRequestException
+      );
+    }
+  });
+});
 
 describe('toDcaScheduleUpdate', () => {
   it('keeps the editable fields and parses the dates', () => {
@@ -16,6 +35,12 @@ describe('toDcaScheduleUpdate', () => {
       isActive: false,
       weeklyBudget: 250
     });
+  });
+
+  it('rejects a date it cannot parse', () => {
+    expect(() => toDcaScheduleUpdate({ startDate: 'next friday' })).toThrow(
+      BadRequestException
+    );
   });
 
   it('drops the plan, the relations and unknown fields', () => {

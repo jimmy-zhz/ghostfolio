@@ -57,7 +57,7 @@ export class McpService {
         tool.name,
         {
           annotations: {
-            destructiveHint: tool.method === 'DELETE',
+            destructiveHint: tool.destructive ?? tool.method === 'DELETE',
             idempotentHint: tool.idempotent ?? tool.method !== 'POST',
             openWorldHint: false,
             readOnlyHint: (tool.method ?? 'GET') === 'GET'

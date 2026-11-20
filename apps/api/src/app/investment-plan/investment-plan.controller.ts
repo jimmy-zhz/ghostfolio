@@ -31,6 +31,7 @@ import {
 } from '@prisma/client';
 
 import {
+  assertAllocationGroupSymbols,
   toDcaScheduleUpdate,
   toPriceAlertUpdate
 } from './investment-plan.helper';
@@ -139,6 +140,8 @@ export class InvestmentPlanController {
       targetWeight: number;
     }
   ) {
+    assertAllocationGroupSymbols(body?.symbols);
+
     const plan = await this.getOrCreatePlan();
     return this.investmentPlanService.upsertAllocationGroup(plan.id, body);
   }

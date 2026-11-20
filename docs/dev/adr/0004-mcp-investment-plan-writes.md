@@ -30,7 +30,10 @@
 - 白名单仍落在发请求的地方（`MCP_ALLOWED_WRITES`），条目支持 `:param`，只匹配一个路径段。
 - 描述沿用 `create_activity` 的规矩：先把要写的内容给用户看并得到明确确认；删除和改配置目标写明后果；
   改、删类先用 `get_investment_plan` 取 id。
-- 注解：写工具 `readOnlyHint: false`，删除类 `destructiveHint: true`。
+- 注解：写工具 `readOnlyHint: false`，删除类和 `upsert_allocation_group`（替换一组时会删掉没列出的标的）
+  `destructiveHint: true`。
+- 参数在调用 API 之前校验：日期必须是 `YYYY-MM-DD`，`dataSource` 必须是 Ghostfolio 的数据源之一。
+  REST 这边，DCA 更新里的日期解析失败返回 400；配置组的 `symbols` 为空返回 400（之前空数组加 name 会删光整组的标的）。
 - 授权页文案改为：可以维护投资计划的提醒、定投、信号和配置目标（含删除），不能改删交易、不能改资金池。
 
 ## 同时修掉的问题

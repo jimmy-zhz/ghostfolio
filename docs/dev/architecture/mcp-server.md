@@ -86,7 +86,8 @@ MCP 客户端 ──POST /api/v1/mcp──▶ McpController
   不只靠工具定义：任何不在名单里的非 GET 请求直接抛错。名单条目里的 `:param`
   只匹配一个路径段，且不能是 `.`、`..`，不能带 `?`、`#`；`buildApiPath` 替换参数时也做同样的检查。
 - 工具定义支持 `POST`、`PUT`（非路径参数放 JSON body）和 `DELETE`（没有 body）。
-- 注解：写工具 `readOnlyHint: false`，删除类 `destructiveHint: true`，新建类和
+- 注解：写工具 `readOnlyHint: false`，删除类和 `upsert_allocation_group`（替换一组时会删掉没列出的标的）
+  `destructiveHint: true`，新建类和
   `upsert_allocation_group`（不带 `groupId` 时每次新建一组）`idempotentHint: false`。
 - 描述里写死规矩：以 `WRITE` 开头；写入前把要写的内容给用户确认；`create_activity` 先用
   `list_activities` 查重；改、删类先用 `get_investment_plan` 取 id；删除和改配置目标写明后果

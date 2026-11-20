@@ -1,9 +1,14 @@
+import { DataSource } from '@prisma/client';
 import { z } from 'zod';
 
 import type { McpHttpMethod } from './mcp-api-client';
 
 export interface McpToolDefinition {
   description: string;
+  /**
+   * Whether the tool can remove data. Defaults to true for `DELETE` only.
+   */
+  destructive?: boolean;
   /**
    * Whether calling the tool twice with the same arguments has no additional
    * effect. Defaults to true for every method except `POST`.
@@ -81,7 +86,11 @@ const deadlineDay = z
   .max(6)
   .describe('Weekday by which the buy is forced, 0 = Sunday ... 6 = Saturday');
 
-const isoDate = z.string().describe('ISO date, e.g. 2026-11-20');
+const isoDate = z.iso.date().describe('Date as YYYY-MM-DD, e.g. 2026-11-20');
+
+const planDataSource = z
+  .enum(DataSource)
+  .describe('Data source from lookup_symbol, e.g. YAHOO');
 
 /**
  * Added to every write tool on the investment plan, see create_activity for
@@ -302,7 +311,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     description: `WRITE. Create a price alert that notifies the user (email/webhook of the plan) once the price of a symbol crosses targetValue. ${CONFIRM_FIRST} Not idempotent: calling twice creates two alerts.`,
     inputSchema: {
       condition: alertCondition,
-      dataSource: z.string().describe('Data source from lookup_symbol'),
+      dataSource: planDataSource,
       messageTemplate: z
         .string()
         .optional()
@@ -316,10 +325,10 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     path: '/investment-plan/price-alert'
   },
   {
-    description: `WRITE. Change a price alert; only the given fields change. Take the id from get_investment_plan. ${CONFIRM_FIRST} To fire a triggered alert again use rearm_price_alert.`,
+    description: `WRITE. Change a price alert; only the given fields change. Take the id from get_investment_plan. ${CONFIRM_FIRST} A triggered alert stays off after a change: when you change its target or condition, call rearm_price_alert right after so that it can fire again.`,
     inputSchema: {
       condition: alertCondition.optional(),
-      dataSource: z.string().optional(),
+      dataSource: planDataSource.optional(),
       id: planItemId('price alert'),
       isActive: z.boolean().optional().describe('false pauses the alert'),
       messageTemplate: z.string().optional(),
@@ -410,7 +419,9 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     pathParams: ['id']
   },
   {
-    description: `WRITE. Create or replace a target allocation group: its symbols, target weight and rebalance threshold. With groupId (from get_investment_plan) the group is replaced: symbols left out are removed from it. A symbol of another group moves to this one. This changes what get_rebalancing reports and the rebalancing alerts. ${CONFIRM_FIRST} Show the target weights of all groups after the change; they should add up to 100.`,
+    description: `WRITE, DESTRUCTIVE. Create or replace a target allocation group: its symbols, target weight and rebalance threshold. With groupId (from get_investment_plan) the group is replaced: symbols left out are removed from it. A symbol of another group moves to this one. This changes what get_rebalancing reports and the rebalancing alerts. ${CONFIRM_FIRST} Show the target weights of all groups after the change; they should add up to 100.`,
+    // Replacing a group removes the symbols left out
+    destructive: true,
     idempotent: false,
     inputSchema: {
       groupId: z
