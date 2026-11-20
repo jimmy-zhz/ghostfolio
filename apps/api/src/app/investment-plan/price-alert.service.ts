@@ -3,7 +3,7 @@ import type { MailService } from '@ghostfolio/api/services/mail/mail.service';
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 import { getAssetProfileIdentifier } from '@ghostfolio/common/helper';
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AlertCondition, PriceAlert, Prisma } from '@prisma/client';
 
 import { InvestmentPlanService, PlanWithRelations } from './investment-plan.service';
@@ -28,17 +28,24 @@ export class PriceAlertService {
   }
 
   public async updateAlert(
+    planId: string,
     id: string,
-    data: Prisma.PriceAlertUpdateInput
+    data: Prisma.PriceAlertUncheckedUpdateInput
   ): Promise<PriceAlert> {
+    await this.assertAlertOfPlan(planId, id);
+
     return this.prismaService.priceAlert.update({ data, where: { id } });
   }
 
-  public async deleteAlert(id: string): Promise<void> {
+  public async deleteAlert(planId: string, id: string): Promise<void> {
+    await this.assertAlertOfPlan(planId, id);
+
     await this.prismaService.priceAlert.delete({ where: { id } });
   }
 
-  public async rearmAlert(id: string): Promise<PriceAlert> {
+  public async rearmAlert(planId: string, id: string): Promise<PriceAlert> {
+    await this.assertAlertOfPlan(planId, id);
+
     return this.prismaService.priceAlert.update({
       data: { isActive: true, triggeredAt: null, triggeredValue: null },
       where: { id }
@@ -185,6 +192,20 @@ export class PriceAlertService {
         return currentValue <= targetValue;
       default:
         return false;
+    }
+  }
+
+  /**
+   * Updates and deletes by id must stay within the plan of the user
+   */
+  private async assertAlertOfPlan(planId: string, id: string) {
+    const alert = await this.prismaService.priceAlert.findFirst({
+      select: { id: true },
+      where: { id, planId }
+    });
+
+    if (!alert) {
+      throw new NotFoundException(`Price alert ${id} not found`);
     }
   }
 }

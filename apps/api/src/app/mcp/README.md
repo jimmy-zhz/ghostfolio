@@ -2,7 +2,8 @@
 
 [Model Context Protocol](https://modelcontextprotocol.io/) endpoint that lets an
 AI client (Claude Code, ...) pull portfolio data to support investment
-decisions, and record transactions from a screenshot.
+decisions, record transactions from a screenshot and maintain the investment
+plan.
 
 - **Endpoint:** `POST /api/v1/mcp` (Streamable HTTP, stateless, JSON responses;
   `GET`/`DELETE` answer `405`)
@@ -11,19 +12,38 @@ decisions, and record transactions from a screenshot.
   replayed against the API of the same process over `127.0.0.1`, so guards,
   permissions, subscription checks and response interceptors all apply as for
   the web client.
-- **Read-only for the most part, with one write exception:** every tool only
-  reads, except `create_activity`. The reason is bookkeeping from screenshots:
-  an agent reads a broker trade confirmation and records the trades. The
-  boundary is deliberate: `create_activity` only creates one transaction
-  (`POST /api/v1/activities`, which places no order). There is no edit, no
-  delete and no import, so a wrong entry can be added but never silently
-  changed or removed, and the user fixes it in the UI. The write is allowlisted
-  where the request is sent (`MCP_ALLOWED_WRITES` in `mcp-api-client.ts`), not
-  just by tool definition, and it goes through the normal API guards, so the
-  user needs the `createActivity` permission.
-- **Rules baked into the tool description:** show the user the full list of
-  entries and get explicit confirmation before writing, and check
-  `list_activities` for duplicates first. The call is not idempotent.
+- **Read-only for the most part, with allowlisted writes** (ADR 0002, ADR 0004):
+  - `create_activity` creates one transaction (`POST /api/v1/activities`, which
+    places no order), for bookkeeping from screenshots. Transactions cannot be
+    edited, deleted or imported, so a wrong entry can be added but never
+    silently changed or removed, and the user fixes it in the UI. It goes
+    through the normal API guards, so the user needs the `createActivity`
+    permission.
+  - The investment plan without its capital pool: price alerts (create,
+    update, rearm, delete), the status of a DCA signal, DCA schedules (create,
+    update, delete) and target allocation groups (upsert, delete).
+    `PUT /investment-plan` (capital pool, cash buffer/reserve, growth target,
+    notification settings) stays UI only.
+- **The allowlist is enforced where the request is sent** (`MCP_ALLOWED_WRITES`
+  in `mcp-api-client.ts`), not just by tool definition. An entry is
+  `METHOD /path`, where a `:param` segment matches exactly one path segment
+  (never `.`, `..`, a query or a fragment).
+- **Rules baked into the tool descriptions:** every write starts with `WRITE`
+  and tells the client to show the user exactly what will be written and get
+  explicit confirmation first; deletes and allocation changes also name their
+  consequences (no undo, rebalancing and alerts change). `create_activity`
+  additionally checks `list_activities` for duplicates; tools that change an
+  existing item take its id from `get_investment_plan`.
+- **Annotations:** writes have `readOnlyHint: false`; deletes and
+  `upsert_allocation_group` (replacing a group removes the symbols left out)
+  have `destructiveHint: true`; creates and `upsert_allocation_group` are not
+  idempotent.
+- **Arguments are validated before the API is called:** ids are UUIDs (except
+  `groupId`), dates are `YYYY-MM-DD` and `dataSource` is one of the data
+  sources of Ghostfolio.
+- **Ids are scoped by the API:** updates and deletes by id only find a record
+  of the plan of the signed-in user (`404` otherwise), and the update endpoints
+  only take the editable fields of the record.
 
 ## Secrets never leave through MCP
 
@@ -92,37 +112,49 @@ holdings against my investment plan".
 
 ## Tools
 
-| Tool                        | Endpoint                                     |
-| --------------------------- | -------------------------------------------- |
-| `get_user`                  | `GET /user`                                  |
-| `lookup_symbol`             | `GET /symbol/lookup`                         |
-| `list_accounts`             | `GET /account`                               |
-| `get_portfolio_details`     | `GET /portfolio/details`                     |
-| `list_holdings`             | `GET /portfolio/holdings`                    |
-| `get_holding`               | `GET /portfolio/holding/:dataSource/:symbol` |
-| `get_portfolio_performance` | `GET /v2/portfolio/performance`              |
-| `get_portfolio_investments` | `GET /portfolio/investments`                 |
-| `get_portfolio_dividends`   | `GET /portfolio/dividends`                   |
-| `get_portfolio_report`      | `GET /portfolio/report`                      |
-| `list_activities`           | `GET /activities`                            |
-| `get_investment_plan`       | `GET /investment-plan`                       |
-| `get_investment_signals`    | `GET /investment-plan/signals`               |
-| `get_rebalancing`           | `GET /investment-plan/rebalancing`           |
-| `get_watchlist`             | `GET /watchlist`                             |
-| `create_activity` (write)   | `POST /activities`                           |
+| Tool                                           | Endpoint                                            |
+| ---------------------------------------------- | --------------------------------------------------- |
+| `get_user`                                     | `GET /user`                                         |
+| `lookup_symbol`                                | `GET /symbol/lookup`                                |
+| `list_accounts`                                | `GET /account`                                      |
+| `get_portfolio_details`                        | `GET /portfolio/details`                            |
+| `list_holdings`                                | `GET /portfolio/holdings`                           |
+| `get_holding`                                  | `GET /portfolio/holding/:dataSource/:symbol`        |
+| `get_portfolio_performance`                    | `GET /v2/portfolio/performance`                     |
+| `get_portfolio_investments`                    | `GET /portfolio/investments`                        |
+| `get_portfolio_dividends`                      | `GET /portfolio/dividends`                          |
+| `get_portfolio_report`                         | `GET /portfolio/report`                             |
+| `list_activities`                              | `GET /activities`                                   |
+| `get_investment_plan`                          | `GET /investment-plan`                              |
+| `get_investment_signals`                       | `GET /investment-plan/signals`                      |
+| `get_rebalancing`                              | `GET /investment-plan/rebalancing`                  |
+| `get_watchlist`                                | `GET /watchlist`                                    |
+| `create_activity` (write)                      | `POST /activities`                                  |
+| `create_price_alert` (write)                   | `POST /investment-plan/price-alert`                 |
+| `update_price_alert` (write)                   | `PUT /investment-plan/price-alert/:id`              |
+| `rearm_price_alert` (write)                    | `PUT /investment-plan/price-alert/:id/rearm`        |
+| `delete_price_alert` (write, destructive)      | `DELETE /investment-plan/price-alert/:id`           |
+| `update_signal_status` (write)                 | `PUT /investment-plan/signals/:id/status`           |
+| `create_dca_schedule` (write)                  | `POST /investment-plan/dca`                         |
+| `update_dca_schedule` (write)                  | `PUT /investment-plan/dca/:id`                      |
+| `delete_dca_schedule` (write, destructive)     | `DELETE /investment-plan/dca/:id`                   |
+| `upsert_allocation_group` (write)              | `PUT /investment-plan/allocation-group`             |
+| `delete_allocation_group` (write, destructive) | `DELETE /investment-plan/allocation-group/:groupId` |
 
 ## Adding a tool
 
 Add an entry to `MCP_TOOLS` in `mcp-tools.ts` and keep its description short:
 the tool list is resident context for the connected model. Tools are `GET`
-only. A tool that writes also needs its `METHOD /path` added to
-`MCP_ALLOWED_WRITES` in `mcp-api-client.ts`, an explicit decision that should
-come with a test and an update of this README and the consent text in
-`oauth/oauth-pages.ts`. Responses above 200,000 characters are refused with a
+unless they are an allowlisted write. A tool that writes (`POST`, `PUT` or
+`DELETE`) also needs its `METHOD /path` added to `MCP_ALLOWED_WRITES` in
+`mcp-api-client.ts`, an explicit decision that should come with a test, an ADR
+and an update of this README and the consent text in `oauth/oauth-pages.ts`.
+The test `has a tool for every allowed write` keeps the list and the tools in
+step. Responses above 200,000 characters are refused with a
 hint to narrow the filters instead of being truncated.
 
 ## Tests
 
 ```bash
-cd apps/api && npx jest -c jest.config.ts src/app/mcp
+cd apps/api && npx jest -c jest.config.ts src/app/mcp src/app/investment-plan
 ```

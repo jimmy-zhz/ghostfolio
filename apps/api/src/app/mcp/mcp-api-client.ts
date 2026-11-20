@@ -5,12 +5,33 @@ import { McpToolDefinition } from './mcp-tools';
 export const MCP_MAX_RESPONSE_CHARACTERS = 200_000;
 
 /**
- * The only requests that may change data, as `METHOD /path`. Everything else
- * must be a GET. This is checked where the request is sent, so a tool
- * definition cannot open another write endpoint by accident: adding one means
- * editing this list on purpose.
+ * The only requests that may change data, as `METHOD /path`, where a `:param`
+ * segment matches one path segment. Everything else must be a GET. This is
+ * checked where the request is sent, so a tool definition cannot open another
+ * write endpoint by accident: adding one means editing this list on purpose
+ * (see ADR 0002 and ADR 0004).
  */
-export const MCP_ALLOWED_WRITES = ['POST /api/v1/activities'];
+export const MCP_ALLOWED_WRITES = [
+  'POST /api/v1/activities',
+  'POST /api/v1/investment-plan/price-alert',
+  'PUT /api/v1/investment-plan/price-alert/:id',
+  'PUT /api/v1/investment-plan/price-alert/:id/rearm',
+  'DELETE /api/v1/investment-plan/price-alert/:id',
+  'PUT /api/v1/investment-plan/signals/:id/status',
+  'POST /api/v1/investment-plan/dca',
+  'PUT /api/v1/investment-plan/dca/:id',
+  'DELETE /api/v1/investment-plan/dca/:id',
+  'PUT /api/v1/investment-plan/allocation-group',
+  'DELETE /api/v1/investment-plan/allocation-group/:groupId'
+];
+
+export type McpHttpMethod = 'DELETE' | 'GET' | 'POST' | 'PUT';
+
+/**
+ * A substituted path parameter: one encoded segment, never a dot segment (which
+ * encodeURIComponent keeps) and never a query or fragment.
+ */
+const PATH_PARAMETER_SEGMENT = /^(?!\.{1,2}$)[^/?#]+$/;
 
 export interface McpApiResponse {
   body: string;
@@ -35,11 +56,17 @@ export function buildApiPath({
       throw new Error(`Missing required path parameter "${name}"`);
     }
 
-    path = path.replace(`:${name}`, encodeURIComponent(String(value)));
+    const segment = encodeURIComponent(String(value));
+
+    if (!PATH_PARAMETER_SEGMENT.test(segment)) {
+      throw new Error(`Invalid path parameter "${name}"`);
+    }
+
+    path = path.replace(`:${name}`, segment);
   }
 
-  if (tool.method === 'POST') {
-    // Arguments travel in the body, see buildApiBody
+  if (tool.method && tool.method !== 'GET') {
+    // Arguments travel in the body (see buildApiBody), a DELETE has none
     return `/api/v${tool.version ?? 1}${path}`;
   }
 
@@ -98,9 +125,42 @@ export function assertRequestAllowed({
   method: string;
   path: string;
 }) {
-  if (method !== 'GET' && !MCP_ALLOWED_WRITES.includes(`${method} ${path}`)) {
+  if (
+    method !== 'GET' &&
+    !MCP_ALLOWED_WRITES.some((allowedWrite) => {
+      return matchesAllowedWrite({ allowedWrite, method, path });
+    })
+  ) {
     throw new Error(`${method} ${path} is not allowed through MCP`);
   }
+}
+
+function matchesAllowedWrite({
+  allowedWrite,
+  method,
+  path
+}: {
+  allowedWrite: string;
+  method: string;
+  path: string;
+}) {
+  const [allowedMethod, allowedPath] = allowedWrite.split(' ');
+
+  if (method !== allowedMethod) {
+    return false;
+  }
+
+  const allowedSegments = allowedPath.split('/');
+  const segments = path.split('/');
+
+  return (
+    segments.length === allowedSegments.length &&
+    allowedSegments.every((allowedSegment, index) => {
+      return allowedSegment.startsWith(':')
+        ? PATH_PARAMETER_SEGMENT.test(segments[index])
+        : allowedSegment === segments[index];
+    })
+  );
 }
 
 /**
@@ -118,7 +178,7 @@ export function callLocalApi({
 }: {
   authorizationToken: string;
   body?: Record<string, unknown>;
-  method?: 'GET' | 'POST';
+  method?: McpHttpMethod;
   path: string;
   port: number;
 }): Promise<McpApiResponse> {
@@ -129,7 +189,10 @@ export function callLocalApi({
       return reject(error);
     }
 
-    const payload = method === 'GET' ? undefined : JSON.stringify(body ?? {});
+    const payload =
+      method === 'GET' || method === 'DELETE'
+        ? undefined
+        : JSON.stringify(body ?? {});
 
     const apiRequest = request(
       {

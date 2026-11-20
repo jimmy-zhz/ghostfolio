@@ -2,14 +2,18 @@
 
 Ghostfolio exposes a [Model Context Protocol](https://modelcontextprotocol.io/) endpoint
 so an AI client such as Claude can read your portfolio, transactions and investment
-plan to support decisions, and record transactions you confirm.
+plan to support decisions, record transactions you confirm, and maintain your investment
+plan.
 
 ```text
 POST https://<your-host>/api/v1/mcp
 ```
 
-Everything is read-only except one tool, `create_activity`, which records a single
-transaction. There is no edit, delete or import.
+Everything is read-only except the tools marked as write: `create_activity`, which
+records a single transaction (there is no edit, delete or import of transactions), and
+the tools that maintain the price alerts, DCA schedules, signals and target allocation
+groups of the investment plan. The capital pool, cash buffer and reserve, growth target
+and notification settings can only be changed in the Ghostfolio UI.
 
 ## Before you connect
 
@@ -68,6 +72,13 @@ list.
 | `get_rebalancing`           | Drift per allocation group and the buy/sell actions          |
 | `get_watchlist`             | Watchlist with market prices                                 |
 | `create_activity` (write)   | Records one transaction                                      |
+| `create_price_alert`, `update_price_alert`, `rearm_price_alert` (write) | Create, change or re-enable a price alert |
+| `delete_price_alert` (write) | Deletes a price alert |
+| `update_signal_status` (write) | Marks a DCA signal as executed or dismissed |
+| `create_dca_schedule`, `update_dca_schedule` (write) | Create or change a DCA schedule |
+| `delete_dca_schedule` (write) | Deletes a DCA schedule |
+| `upsert_allocation_group` (write) | Creates or replaces a target allocation group |
+| `delete_allocation_group` (write) | Deletes a target allocation group |
 
 ### Recording transactions
 
@@ -81,6 +92,20 @@ A date without a time (`2026-10-20`) is recorded at noon UTC, so the web client 
 the same day in every time zone from UTC-12 to UTC+11. Midnight UTC would show as the
 day before west of UTC. With a time, the client should send the offset, for example
 `2026-10-20T11:13:58-04:00`.
+
+### Maintaining the investment plan
+
+The plan tools change the plan as you would in the UI, after the client has shown you
+the change and you have confirmed it. To change or delete an item, the client first
+looks up its id with `get_investment_plan` (signals: `get_investment_signals`).
+
+- Deleting a price alert, a DCA schedule or an allocation group cannot be undone. To
+  stop an alert or a schedule for a while, ask for it to be paused instead
+  (`isActive: false`).
+- Changing the allocation groups changes the rebalancing (`get_rebalancing`) and its
+  alerts. The target weights of all groups should still add up to 100.
+- Marking a signal as executed does not record the buy; that is a separate
+  `create_activity`.
 
 ### What is never returned
 

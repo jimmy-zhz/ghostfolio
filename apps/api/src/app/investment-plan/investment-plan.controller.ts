@@ -8,11 +8,13 @@ import {
 } from './rebalancing.service';
 
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   Inject,
+  NotFoundException,
   Param,
   Post,
   Put,
@@ -20,8 +22,19 @@ import {
 } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { AlertCondition, DataSource, DcaSignalType, DcaType } from '@prisma/client';
+import {
+  AlertCondition,
+  DataSource,
+  DcaSignalType,
+  DcaType,
+  SignalStatus
+} from '@prisma/client';
 
+import {
+  assertAllocationGroupSymbols,
+  toDcaScheduleUpdate,
+  toPriceAlertUpdate
+} from './investment-plan.helper';
 import { InvestmentPlanService } from './investment-plan.service';
 
 @Controller('investment-plan')
@@ -127,6 +140,8 @@ export class InvestmentPlanController {
       targetWeight: number;
     }
   ) {
+    assertAllocationGroupSymbols(body?.symbols);
+
     const plan = await this.getOrCreatePlan();
     return this.investmentPlanService.upsertAllocationGroup(plan.id, body);
   }
@@ -173,13 +188,21 @@ export class InvestmentPlanController {
     @Param('id') id: string,
     @Body() body: Record<string, unknown>
   ) {
-    return this.investmentPlanService.updateDcaSchedule(id, body);
+    const planId = await this.getPlanIdOfUser();
+
+    return this.investmentPlanService.updateDcaSchedule(
+      planId,
+      id,
+      toDcaScheduleUpdate(body)
+    );
   }
 
   @Delete('dca/:id')
   @UseGuards(AuthGuard('jwt'))
   public async deleteDcaSchedule(@Param('id') id: string) {
-    await this.investmentPlanService.deleteDcaSchedule(id);
+    const planId = await this.getPlanIdOfUser();
+
+    await this.investmentPlanService.deleteDcaSchedule(planId, id);
     return { success: true };
   }
 
@@ -210,7 +233,9 @@ export class InvestmentPlanController {
   @Put('price-alert/:id/rearm')
   @UseGuards(AuthGuard('jwt'))
   public async rearmPriceAlert(@Param('id') id: string) {
-    return this.priceAlertService.rearmAlert(id);
+    const planId = await this.getPlanIdOfUser();
+
+    return this.priceAlertService.rearmAlert(planId, id);
   }
 
   @Put('price-alert/:id')
@@ -219,13 +244,21 @@ export class InvestmentPlanController {
     @Param('id') id: string,
     @Body() body: Record<string, unknown>
   ) {
-    return this.priceAlertService.updateAlert(id, body);
+    const planId = await this.getPlanIdOfUser();
+
+    return this.priceAlertService.updateAlert(
+      planId,
+      id,
+      toPriceAlertUpdate(body)
+    );
   }
 
   @Delete('price-alert/:id')
   @UseGuards(AuthGuard('jwt'))
   public async deletePriceAlert(@Param('id') id: string) {
-    await this.priceAlertService.deleteAlert(id);
+    const planId = await this.getPlanIdOfUser();
+
+    await this.priceAlertService.deleteAlert(planId, id);
     return { success: true };
   }
 
@@ -274,7 +307,35 @@ export class InvestmentPlanController {
     @Param('id') id: string,
     @Body() body: { status: 'EXECUTED' | 'DISMISSED' }
   ) {
-    return this.investmentPlanService.updateSignalStatus(id, body.status as any);
+    if (
+      body?.status !== SignalStatus.EXECUTED &&
+      body?.status !== SignalStatus.DISMISSED
+    ) {
+      throw new BadRequestException('status must be EXECUTED or DISMISSED');
+    }
+
+    const planId = await this.getPlanIdOfUser();
+
+    return this.investmentPlanService.updateSignalStatus(
+      planId,
+      id,
+      body.status
+    );
+  }
+
+  /**
+   * Writes by id never create a plan: without one there is nothing to change
+   */
+  private async getPlanIdOfUser() {
+    const plan = await this.investmentPlanService.getPlanByUserId(
+      this.request.user.id
+    );
+
+    if (!plan) {
+      throw new NotFoundException('Investment plan not found');
+    }
+
+    return plan.id;
   }
 
   private async getOrCreatePlan() {

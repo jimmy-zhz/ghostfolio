@@ -2,7 +2,7 @@ import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
 
 import { randomUUID } from 'node:crypto';
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   DcaSchedule,
   InvestmentPlan,
@@ -171,13 +171,18 @@ export class InvestmentPlanService {
   }
 
   public async updateDcaSchedule(
+    planId: string,
     id: string,
-    data: Prisma.DcaScheduleUpdateInput
+    data: Prisma.DcaScheduleUncheckedUpdateInput
   ): Promise<DcaSchedule> {
+    await this.assertDcaScheduleOfPlan(planId, id);
+
     return this.prismaService.dcaSchedule.update({ data, where: { id } });
   }
 
-  public async deleteDcaSchedule(id: string): Promise<void> {
+  public async deleteDcaSchedule(planId: string, id: string): Promise<void> {
+    await this.assertDcaScheduleOfPlan(planId, id);
+
     await this.prismaService.dcaSchedule.delete({ where: { id } });
   }
 
@@ -207,7 +212,20 @@ export class InvestmentPlanService {
     });
   }
 
-  public async updateSignalStatus(id: string, status: SignalStatus): Promise<InvestmentSignal> {
+  public async updateSignalStatus(
+    planId: string,
+    id: string,
+    status: SignalStatus
+  ): Promise<InvestmentSignal> {
+    const signal = await this.prismaService.investmentSignal.findFirst({
+      select: { id: true },
+      where: { id, planId }
+    });
+
+    if (!signal) {
+      throw new NotFoundException(`Signal ${id} not found`);
+    }
+
     return this.prismaService.investmentSignal.update({
       data: { status },
       where: { id }
@@ -245,6 +263,20 @@ export class InvestmentPlanService {
     return this.prismaService.investmentPlan.findMany({
       include: { allocations: true, dcaSchedules: true, priceAlerts: true }
     });
+  }
+
+  /**
+   * Updates and deletes by id must stay within the plan of the user
+   */
+  private async assertDcaScheduleOfPlan(planId: string, id: string) {
+    const dcaSchedule = await this.prismaService.dcaSchedule.findFirst({
+      select: { id: true },
+      where: { id, planId }
+    });
+
+    if (!dcaSchedule) {
+      throw new NotFoundException(`DCA schedule ${id} not found`);
+    }
   }
 }
 

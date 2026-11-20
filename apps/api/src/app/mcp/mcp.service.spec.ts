@@ -4,6 +4,7 @@ import { createServer, IncomingMessage, Server } from 'node:http';
 import { AddressInfo } from 'node:net';
 
 import {
+  MCP_ALLOWED_WRITES,
   assertRequestAllowed,
   buildApiBody,
   buildApiPath,
@@ -12,6 +13,22 @@ import {
 import { McpAuthService } from './mcp-auth.service';
 import { MCP_TOOLS } from './mcp-tools';
 import { McpService } from './mcp.service';
+
+const ALERT_ID = '0f8fad5b-d9cb-469f-a165-70867728950e';
+
+const WRITE_TOOLS = [
+  'create_activity',
+  'create_price_alert',
+  'update_price_alert',
+  'rearm_price_alert',
+  'delete_price_alert',
+  'update_signal_status',
+  'create_dca_schedule',
+  'update_dca_schedule',
+  'delete_dca_schedule',
+  'upsert_allocation_group',
+  'delete_allocation_group'
+];
 
 describe('buildApiPath', () => {
   const tool = (name: string) => MCP_TOOLS.find((t) => t.name === name);
@@ -44,6 +61,14 @@ describe('buildApiPath', () => {
     expect(() =>
       buildApiPath({ args: { symbol: 'AAPL' }, tool: tool('get_holding') })
     ).toThrow('Missing required path parameter "dataSource"');
+  });
+
+  it('rejects a dot segment as a path parameter', () => {
+    for (const id of ['.', '..']) {
+      expect(() =>
+        buildApiPath({ args: { id }, tool: tool('delete_price_alert') })
+      ).toThrow('Invalid path parameter "id"');
+    }
   });
 });
 
@@ -114,7 +139,7 @@ describe('McpService', () => {
     await client.close();
   });
 
-  it('advertises every tool as read-only except create_activity', async () => {
+  it('advertises every tool as read-only except the writes', async () => {
     const { tools } = await client.listTools();
 
     expect(tools).toHaveLength(MCP_TOOLS.length);
@@ -122,8 +147,148 @@ describe('McpService', () => {
       tools
         .filter(({ annotations }) => !annotations.readOnlyHint)
         .map(({ name }) => name)
-    ).toEqual(['create_activity']);
-    expect(client.getInstructions()).toContain('read-only except');
+    ).toEqual(WRITE_TOOLS);
+    expect(
+      tools
+        .filter(({ annotations }) => annotations.destructiveHint)
+        .map(({ name }) => name)
+    ).toEqual([
+      'delete_price_alert',
+      'delete_dca_schedule',
+      // Replacing a group removes the symbols left out
+      'upsert_allocation_group',
+      'delete_allocation_group'
+    ]);
+    expect(
+      tools
+        .filter(({ annotations }) => !annotations.idempotentHint)
+        .map(({ name }) => name)
+    ).toEqual([
+      'create_activity',
+      'create_price_alert',
+      'create_dca_schedule',
+      'upsert_allocation_group'
+    ]);
+    expect(
+      tools
+        .filter(({ name }) => WRITE_TOOLS.includes(name))
+        .every(({ description }) => description.startsWith('WRITE'))
+    ).toBe(true);
+    expect(client.getInstructions()).toContain(
+      'read-only except the ones marked WRITE'
+    );
+  });
+
+  it('replays update_price_alert as a PUT with the id in the path', async () => {
+    responseBody = JSON.stringify({ id: ALERT_ID });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    const result = await client.callTool({
+      arguments: { id: ALERT_ID, isActive: false, targetValue: 42 },
+      name: 'update_price_alert'
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(received).toHaveLength(1);
+    expect(received[0].method).toBe('PUT');
+    expect(received[0].url).toBe(
+      `/api/v1/investment-plan/price-alert/${ALERT_ID}`
+    );
+    expect(JSON.parse(body)).toEqual({ isActive: false, targetValue: 42 });
+  });
+
+  it('replays delete_dca_schedule as a DELETE without a body', async () => {
+    responseBody = JSON.stringify({ success: true });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    const result = await client.callTool({
+      arguments: { id: ALERT_ID },
+      name: 'delete_dca_schedule'
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(received).toHaveLength(1);
+    expect(received[0].method).toBe('DELETE');
+    expect(received[0].url).toBe(`/api/v1/investment-plan/dca/${ALERT_ID}`);
+    expect(received[0].headers['content-length']).toBeUndefined();
+    expect(body).toBe('');
+  });
+
+  it('sends the symbols of upsert_allocation_group in the body', async () => {
+    responseBody = JSON.stringify([]);
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    const args = {
+      groupId: 'group-1',
+      symbols: [{ symbol: 'XEF.TO' }, { name: 'iShares', symbol: 'XEC.TO' }],
+      targetWeight: 30
+    };
+    const result = await client.callTool({
+      arguments: args,
+      name: 'upsert_allocation_group'
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(received[0].method).toBe('PUT');
+    expect(received[0].url).toBe('/api/v1/investment-plan/allocation-group');
+    expect(JSON.parse(body)).toEqual(args);
+  });
+
+  it('rejects an invalid date or data source before calling the API', async () => {
+    const invalidDate = await client.callTool({
+      arguments: {
+        startDate: 'next friday',
+        symbol: 'XEF.TO',
+        weeklyBudget: 100
+      },
+      name: 'create_dca_schedule'
+    });
+    const invalidDataSource = await client.callTool({
+      arguments: { dataSource: 'NASDAQ', id: ALERT_ID },
+      name: 'update_price_alert'
+    });
+
+    expect(invalidDate.isError).toBe(true);
+    expect(invalidDataSource.isError).toBe(true);
+    expect(received).toHaveLength(0);
+  });
+
+  it('rejects an id that is not a UUID before calling the API', async () => {
+    const result = await client.callTool({
+      arguments: { id: '../../user' },
+      name: 'delete_price_alert'
+    });
+
+    expect(result.isError).toBe(true);
+    expect(received).toHaveLength(0);
+  });
+
+  it('does not pass unknown arguments of a write tool on to the API', async () => {
+    responseBody = JSON.stringify({ id: ALERT_ID });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    await client.callTool({
+      arguments: { id: ALERT_ID, planId: 'other-plan', targetValue: 1 },
+      name: 'update_price_alert'
+    });
+
+    expect(JSON.parse(body)).toEqual({ targetValue: 1 });
   });
 
   it('forwards a tool call to the API with the internal token', async () => {
@@ -312,18 +477,43 @@ describe('McpService', () => {
 describe('write allowlist', () => {
   const tool = (name: string) => MCP_TOOLS.find((t) => t.name === name);
 
-  it('allows only POST /api/v1/activities as a write', () => {
-    expect(() =>
-      assertRequestAllowed({ method: 'POST', path: '/api/v1/activities' })
-    ).not.toThrow();
+  it('allows the listed writes, with any single segment for a parameter', () => {
+    for (const [method, path] of [
+      ['POST', '/api/v1/activities'],
+      ['POST', '/api/v1/investment-plan/price-alert'],
+      ['PUT', `/api/v1/investment-plan/price-alert/${ALERT_ID}`],
+      ['PUT', `/api/v1/investment-plan/price-alert/${ALERT_ID}/rearm`],
+      ['DELETE', `/api/v1/investment-plan/price-alert/${ALERT_ID}`],
+      ['PUT', `/api/v1/investment-plan/signals/${ALERT_ID}/status`],
+      ['POST', '/api/v1/investment-plan/dca'],
+      ['PUT', `/api/v1/investment-plan/dca/${ALERT_ID}`],
+      ['DELETE', `/api/v1/investment-plan/dca/${ALERT_ID}`],
+      ['PUT', '/api/v1/investment-plan/allocation-group'],
+      ['DELETE', '/api/v1/investment-plan/allocation-group/group-1']
+    ]) {
+      expect(() => assertRequestAllowed({ method, path })).not.toThrow();
+    }
+  });
 
+  it('refuses every other write', () => {
     for (const [method, path] of [
       ['POST', '/api/v1/account'],
       ['POST', '/api/v1/activities/import'],
       ['POST', '/api/v1/activities?x=1'],
       ['PUT', '/api/v1/activities/abc'],
       ['DELETE', '/api/v1/activities/abc'],
-      ['POST', '/api/v1/investment-plan/ai-report']
+      ['POST', '/api/v1/investment-plan/ai-report'],
+      // The whole plan (capital pool, cash reserve, notifications) stays UI only
+      ['PUT', '/api/v1/investment-plan'],
+      ['DELETE', '/api/v1/investment-plan/price-alert'],
+      ['DELETE', `/api/v1/investment-plan/price-alert/${ALERT_ID}/rearm`],
+      ['PUT', `/api/v1/investment-plan/price-alert/${ALERT_ID}/x/rearm`],
+      ['PUT', '/api/v1/investment-plan/price-alert/../../investment-plan'],
+      ['PUT', '/api/v1/investment-plan/price-alert/..'],
+      ['PUT', `/api/v1/investment-plan/price-alert/${ALERT_ID}?x=1`],
+      ['DELETE', '/api/v1/investment-plan/allocation-group/'],
+      ['PATCH', `/api/v1/investment-plan/dca/${ALERT_ID}`],
+      ['POST', `/api/v1/investment-plan/dca/${ALERT_ID}`]
     ]) {
       expect(() => assertRequestAllowed({ method, path })).toThrow(
         'is not allowed through MCP'
@@ -331,12 +521,30 @@ describe('write allowlist', () => {
     }
   });
 
-  it('exposes exactly one tool that writes', () => {
+  it('has a tool for every allowed write and allows the write of every tool', () => {
+    const writeTools = MCP_TOOLS.filter(({ method }) => {
+      return method && method !== 'GET';
+    });
+
+    expect(writeTools.map(({ name }) => name)).toEqual(WRITE_TOOLS);
     expect(
-      MCP_TOOLS.filter(({ method }) => method === 'POST').map(
-        ({ name }) => name
-      )
-    ).toEqual(['create_activity']);
+      writeTools.map(({ method, path, version }) => {
+        return `${method} /api/v${version ?? 1}${path}`;
+      })
+    ).toEqual(MCP_ALLOWED_WRITES);
+
+    for (const writeTool of writeTools) {
+      const args = Object.fromEntries(
+        (writeTool.pathParams ?? []).map((name) => [name, ALERT_ID])
+      );
+
+      expect(() =>
+        assertRequestAllowed({
+          method: writeTool.method,
+          path: buildApiPath({ args, tool: writeTool })
+        })
+      ).not.toThrow();
+    }
   });
 
   it('sends the arguments of a POST tool as the body, not the query', () => {

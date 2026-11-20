@@ -73,15 +73,28 @@ MCP 客户端 ──POST /api/v1/mcp──▶ McpController
 - 授权页自己设置 CSP（只有 `frame-ancestors`）：helmet 默认的 `form-action 'self'`
   会让浏览器拦下提交后重定向到客户端回调地址。
 
-## 写入例外：`create_activity`
+## 写入例外
 
-默认只读，唯一的写入是 `create_activity`（`POST /api/v1/activities`）。决策见
-[ADR 0002](../adr/0002-mcp-single-write-exception.md)。
+默认只读。写入只有两类，决策见 [ADR 0002](../adr/0002-mcp-single-write-exception.md)
+和 [ADR 0004](../adr/0004-mcp-investment-plan-writes.md)：
+
+1. `create_activity`（`POST /api/v1/activities`）：记一笔交易。不提供交易的编辑、删除、导入。
+2. 投资计划（不含整份计划 `PUT /investment-plan`）：价格提醒的增、改、重新启用、删，
+   定投信号的状态，定投计划的增、改、删，配置目标组的增改（upsert）、删。
 
 - 写入白名单放在**发请求的地方**（`MCP_ALLOWED_WRITES`，`mcp-api-client.ts`），
-  不只靠工具定义：任何不在名单里的非 GET 请求直接抛错。
-- 描述里写死两条规矩：写入前把清单给用户确认；先用 `list_activities` 查重。
-- 不提供编辑、删除、导入。
+  不只靠工具定义：任何不在名单里的非 GET 请求直接抛错。名单条目里的 `:param`
+  只匹配一个路径段，且不能是 `.`、`..`，不能带 `?`、`#`；`buildApiPath` 替换参数时也做同样的检查。
+- 工具定义支持 `POST`、`PUT`（非路径参数放 JSON body）和 `DELETE`（没有 body）。
+- 注解：写工具 `readOnlyHint: false`，删除类和 `upsert_allocation_group`（替换一组时会删掉没列出的标的）
+  `destructiveHint: true`，新建类和
+  `upsert_allocation_group`（不带 `groupId` 时每次新建一组）`idempotentHint: false`。
+- 描述里写死规矩：以 `WRITE` 开头；写入前把要写的内容给用户确认；`create_activity` 先用
+  `list_activities` 查重；改、删类先用 `get_investment_plan` 取 id；删除和改配置目标写明后果
+  （不能撤销、影响再平衡和提醒）。
+- id 归属在 API 层校验：按 id 改、删的接口只认当前用户计划里的记录，否则 404；
+  `PUT dca/:id`、`PUT price-alert/:id` 只接受可编辑字段（`investment-plan.helper.ts`），
+  请求体不再原样交给 Prisma。
 - **日期**：只有日期（`2026-10-20`）时，`buildApiBody` 补成当天 12:00 UTC。API 把无时间的日期当作 UTC 零点，
   网页按本地时区显示，温尼伯就成了前一天。12:00 UTC 在 UTC-12 到 UTC+11 之间都是同一天。带时间的日期原样传，
   要求客户端带时区偏移。

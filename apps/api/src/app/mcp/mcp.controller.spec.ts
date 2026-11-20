@@ -105,7 +105,14 @@ describe('McpController', () => {
     );
   });
 
-  it('does not let an unauthenticated client call create_activity', async () => {
+  it.each([
+    { arguments: {}, name: 'create_activity' },
+    {
+      arguments: { id: '0f8fad5b-d9cb-469f-a165-70867728950e' },
+      name: 'delete_price_alert'
+    },
+    { arguments: { groupId: 'group-1' }, name: 'delete_allocation_group' }
+  ])('does not let an unauthenticated client call $name', async (params) => {
     apiAuthorization = 'untouched';
 
     const response = await fetch(baseUrl, {
@@ -113,7 +120,7 @@ describe('McpController', () => {
         id: 1,
         jsonrpc: '2.0',
         method: 'tools/call',
-        params: { arguments: {}, name: 'create_activity' }
+        params
       }),
       headers: {
         accept: 'application/json, text/event-stream',

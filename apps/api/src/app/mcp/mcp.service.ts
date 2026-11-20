@@ -17,7 +17,7 @@ import { MCP_TOOLS, McpToolDefinition } from './mcp-tools';
  * Resident context for the whole session of the connected model: state only
  * what cannot be inferred from the tool names and schemas.
  */
-export const MCP_SERVER_INSTRUCTIONS = `Ghostfolio is a personal portfolio tracker. These tools are read-only and return the signed-in user's own data, so use them to ground investment decisions.
+export const MCP_SERVER_INSTRUCTIONS = `Ghostfolio is a personal portfolio tracker. These tools return the signed-in user's own data, so use them to ground investment decisions; the few that write say WRITE.
 
 - Call get_user first: every monetary value is reported in the user's base currency unless a field says otherwise.
 - Positions: list_holdings (flat) or get_portfolio_details (allocation, accounts, summary). get_holding gives one position in depth; take its dataSource and symbol from list_holdings.
@@ -25,7 +25,9 @@ export const MCP_SERVER_INSTRUCTIONS = `Ghostfolio is a personal portfolio track
 - Investment plan: get_investment_plan holds the user's targets (capital pool, cash buffer, growth target, allocation groups with target weights, DCA schedules, price alerts). Compare it with the actual portfolio: get_rebalancing shows the drift and the needed actions, get_investment_signals the recent DCA signals.
 - Performance figures depend on the range argument (default ytd); state the range when quoting them.
 - A tool error with a 4xx/5xx status comes straight from the Ghostfolio API; do not retry it unchanged.
-- All tools are read-only except create_activity, which records one transaction in the ledger (it places no order). Follow its rules: show the user the full list of entries and get explicit confirmation first, and check list_activities for duplicates. Use lookup_symbol to get the symbol and dataSource right. There is no edit or delete; the plan and any correction have to be made by the user in the Ghostfolio UI.`;
+- Tools are read-only except the ones marked WRITE. Before any write, show the user exactly what will be written and get explicit confirmation. Use lookup_symbol to get the symbol and dataSource right.
+- create_activity records one transaction in the ledger (it places no order); check list_activities for duplicates first. Transactions cannot be edited or deleted here, the user corrects them in the Ghostfolio UI.
+- The investment plan's price alerts, DCA schedules, signal status and target allocation groups can be changed; take the ids from get_investment_plan (signals: get_investment_signals). Deleting an alert, a schedule or a group cannot be undone, and changing the allocation groups changes the rebalancing and its alerts, so say so when asking for confirmation. The capital pool, cash buffer/reserve, growth target and notification settings can only be changed by the user in the Ghostfolio UI.`;
 
 @Injectable()
 export class McpService {
@@ -55,10 +57,10 @@ export class McpService {
         tool.name,
         {
           annotations: {
-            destructiveHint: false,
-            idempotentHint: tool.method !== 'POST',
+            destructiveHint: tool.destructive ?? tool.method === 'DELETE',
+            idempotentHint: tool.idempotent ?? tool.method !== 'POST',
             openWorldHint: false,
-            readOnlyHint: tool.method !== 'POST'
+            readOnlyHint: (tool.method ?? 'GET') === 'GET'
           },
           description: tool.description,
           inputSchema: tool.inputSchema
@@ -83,7 +85,10 @@ export class McpService {
     try {
       const { body: rawBody, statusCode } = await callLocalApi({
         authorizationToken,
-        body: tool.method === 'POST' ? buildApiBody({ args, tool }) : undefined,
+        body:
+          tool.method === 'POST' || tool.method === 'PUT'
+            ? buildApiBody({ args, tool })
+            : undefined,
         method: tool.method ?? 'GET',
         path: buildApiPath({ args, tool }),
         port: this.configurationService.get('PORT')

@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added write tools for the investment plan to the MCP server: price alerts (create, update, rearm, delete), the status of a DCA signal, DCA schedules (create, update, delete) and target allocation groups (upsert, delete); the plan itself (capital pool) stays UI only
 - Merged the upstream release `3.86.0` (2026-10-13) into this fork, including the Angular 22 and Prisma 7 `prisma-client` generator upgrades, the liveness probe and the graceful shutdown
 - Extended the date ranges with `1w`, `1m`, `3m`, `6m`, `2y` and `10y` (line charts, activities and MCP tools)
 
 ### Changed
 
+- Restricted the updates and deletes by id of the investment plan (price alerts, DCA schedules, signals) to the plan of the user and the updates to the editable fields
+- Rejected an allocation group without symbols, which removed every symbol of the group
 - Added a line with the symbol, data source, ISIN and currency below the value in the holding detail dialog
 - Upgraded `bootstrap` from version `4.6.2` to `5.3.8` (taken from the upstream commits `c169311fa` to `28713505f`) and migrated the classes of the pages of this fork (investment plan, portfolio summary, allocations, home overview, tables)
 - Changed the email language of the investment signal emails to the language of the account (_Settings → Language_) and the body to the table of the signals
