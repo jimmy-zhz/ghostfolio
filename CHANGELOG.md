@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added write tools for the investment plan to the MCP server: price alerts (create, update, rearm, delete), the status of a DCA signal, DCA schedules (create, update, delete) and target allocation groups (upsert, delete); the plan itself (capital pool) stays UI only
 - Merged the upstream release `3.86.0` (2026-10-13) into this fork, including the Angular 22 and Prisma 7 `prisma-client` generator upgrades, the liveness probe and the graceful shutdown
 - Extended the date ranges with `1w`, `1m`, `3m`, `6m`, `2y` and `10y` (line charts, activities and MCP tools)
 

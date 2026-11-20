@@ -72,7 +72,7 @@ export function renderConsentPage({
   return renderPage({
     title: 'Authorize access',
     body: `<h1>Authorize ${name}</h1>
-<p><strong>${name}</strong> wants to read your Ghostfolio data (portfolio, holdings, transactions, accounts, investment plan) and to record new transactions in it. It cannot edit or delete anything.</p>
+<p><strong>${name}</strong> wants to read your Ghostfolio data (portfolio, holdings, transactions, accounts, investment plan) to record new transactions, and to maintain the price alerts, DCA schedules, signals and target allocation groups of your investment plan, including deleting them. It cannot edit or delete transactions or change the capital pool of the plan.</p>
 ${errorMessage ? `<p class="error">${escapeHtml(errorMessage)}</p>` : ''}
 <form method="post" action="/oauth/authorize">
 ${fields
