@@ -27,12 +27,45 @@
         class="line-height-normal px-1 text-nowrap"
         mat-cell
       >
-        <div class="text-truncate">
+        <div class="text-truncate" [title]="element?.name">
           {{ element?.name }}
         </div>
-        @if (showSymbol()) {
-          <div>
-            <small class="text-body-secondary">{{ element?.symbol }}</small>
+        @if (showSymbol() || showTrends()) {
+          <div class="align-items-center d-flex gap-2">
+            @if (showSymbol()) {
+              <small class="text-body-secondary text-truncate">{{
+                element?.symbol
+              }}</small>
+            }
+            @if (showTrends()) {
+              <!-- Replaces the trend columns on small screens -->
+              @if (element?.trend50d && element.trend50d !== 'UNKNOWN') {
+                <small
+                  class="align-items-center d-flex d-lg-none text-body-secondary text-nowrap"
+                  i18n-title
+                  title="50-Day Trend"
+                >
+                  <span i18n>50D</span>
+                  <gf-trend-indicator
+                    class="ms-1"
+                    [value]="getTrendIndicatorValue(element.trend50d)"
+                  />
+                </small>
+              }
+              @if (element?.trend200d && element.trend200d !== 'UNKNOWN') {
+                <small
+                  class="align-items-center d-flex d-lg-none text-body-secondary text-nowrap"
+                  i18n-title
+                  title="200-Day Trend"
+                >
+                  <span i18n>200D</span>
+                  <gf-trend-indicator
+                    class="ms-1"
+                    [value]="getTrendIndicatorValue(element.trend200d)"
+                  />
+                </small>
+              }
+            }
           </div>
         }
       </td>

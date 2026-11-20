@@ -11,6 +11,7 @@ import { translate } from '@ghostfolio/ui/i18n';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 
 import { SelectionModel } from '@angular/cdk/collections';
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { CommonModule } from '@angular/common';
 import {
   AfterViewInit,
@@ -25,9 +26,10 @@ import {
   ViewChild,
   computed,
   inject,
-  input
+  input,
+  signal
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -66,10 +68,12 @@ import {
   trashOutline
 } from 'ionicons/icons';
 import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
+import { map } from 'rxjs';
 
 import { GfActivityTypeComponent } from '../activity-type/activity-type.component';
 import { GfEntityLogoComponent } from '../entity-logo/entity-logo.component';
 import { GfNoActivitiesInfoComponent } from '../no-activities-info/no-activities-info.component';
+import { getActivitySummary } from '../shared/mobile-summary';
 import { GfValueComponent } from '../value/value.component';
 import { ActivitiesTableItem } from './interfaces/interfaces';
 
@@ -198,7 +202,7 @@ export class GfActivitiesTableComponent<
       'fee',
       'value',
       'currency',
-      'valueInBaseCurrency',
+      'mobileSummary',
       'account',
       'comment',
       'actions'
@@ -225,9 +229,20 @@ export class GfActivitiesTableComponent<
     return columns;
   });
 
+  // The activity whose details are expanded on small screens
+  protected readonly expandedActivity = signal<T | undefined>(undefined);
+
   protected readonly isLoading = computed(() => {
     return !this.dataSource();
   });
+
+  // Matches the breakpoint below which the columns are hidden (lg)
+  protected readonly isSmallScreen = toSignal(
+    inject(BreakpointObserver)
+      .observe('(max-width: 991.98px)')
+      .pipe(map(({ matches }) => matches)),
+    { initialValue: false }
+  );
 
   private readonly notificationService = inject(NotificationService);
 
@@ -305,6 +320,33 @@ export class GfActivitiesTableComponent<
     );
   }
 
+  public getSummary({
+    account,
+    assetProfile,
+    currency,
+    fee,
+    quantity,
+    unitPrice
+  }: T) {
+    return getActivitySummary({
+      fee,
+      quantity,
+      unitPrice,
+      account: this.showAccountColumn() ? account?.name : undefined,
+      currency: currency ?? assetProfile?.currency,
+      feeLabel: $localize`Fee`,
+      locale: this.locale
+    });
+  }
+
+  public getTagNames({ tags }: T) {
+    return (tags ?? [])
+      .map(({ name }) => {
+        return name;
+      })
+      .join(', ');
+  }
+
   public onChangePage(page: PageEvent) {
     this.pageChanged.emit(page);
   }
@@ -314,11 +356,13 @@ export class GfActivitiesTableComponent<
       if (!activity.error) {
         this.selectedRows.toggle(activity);
       }
-    } else if (this.canClickActivity(activity)) {
-      this.activityClicked.emit({
-        dataSource: activity.assetProfile.dataSource,
-        symbol: activity.assetProfile.symbol
+    } else if (this.isSmallScreen()) {
+      // Most of the columns are hidden, the details are expanded instead
+      this.expandedActivity.update((expandedActivity) => {
+        return expandedActivity === activity ? undefined : activity;
       });
+    } else if (this.canClickActivity(activity)) {
+      this.onViewHolding(activity);
     }
   }
 
@@ -380,6 +424,15 @@ export class GfActivitiesTableComponent<
     this.notificationService.alert({
       title: aComment
     });
+  }
+
+  public onViewHolding(activity: T) {
+    if (this.canClickActivity(activity)) {
+      this.activityClicked.emit({
+        dataSource: activity.assetProfile.dataSource,
+        symbol: activity.assetProfile.symbol
+      });
+    }
   }
 
   public toggleAllRows() {

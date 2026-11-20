@@ -9,6 +9,7 @@ import {
   Benchmark,
   User
 } from '@ghostfolio/common/interfaces';
+import { BenchmarkTrend } from '@ghostfolio/common/types';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 
 import {
@@ -83,9 +84,7 @@ export class GfBenchmarkComponent {
       ...(this.showIcon() ? ['icon'] : []),
       'name',
       ...(this.showMarketPrice() ? ['marketPrice'] : []),
-      ...(this.user()?.settings?.isExperimentalFeatures
-        ? ['trend50d', 'trend200d']
-        : []),
+      ...(this.showTrends() ? ['trend50d', 'trend200d'] : []),
       'date',
       'change',
       'marketCondition',
@@ -95,6 +94,10 @@ export class GfBenchmarkComponent {
 
   protected readonly isLoading = computed(() => {
     return !this.benchmarks();
+  });
+
+  protected readonly showTrends = computed(() => {
+    return !!this.user()?.settings?.isExperimentalFeatures;
   });
 
   protected readonly isNumber = isNumber;
@@ -138,6 +141,10 @@ export class GfBenchmarkComponent {
       });
 
     addIcons({ ellipsisHorizontal, trashOutline });
+  }
+
+  protected getTrendIndicatorValue(trend: BenchmarkTrend) {
+    return trend === 'UP' ? 0.001 : trend === 'DOWN' ? -0.001 : 0;
   }
 
   protected onDeleteItem({ dataSource, symbol }: AssetProfileIdentifier) {

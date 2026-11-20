@@ -53,8 +53,11 @@
         </div>
         @if (mode() === 'default') {
           <div>
-            <small class="text-body-secondary">{{
+            <small class="d-none d-lg-inline text-body-secondary">{{
               element.assetProfile.symbol
+            }}</small>
+            <small class="d-lg-none text-body-secondary">{{
+              getSummary(element)
             }}</small>
           </div>
         }
@@ -162,14 +165,18 @@
     <ng-container matColumnDef="allocationInPercentage">
       <th
         *matHeaderCellDef
-        class="justify-content-end px-1"
+        class="d-none d-lg-table-cell justify-content-end px-1"
         mat-header-cell
         mat-sort-header
       >
         <span class="d-none d-sm-block" i18n>Allocation</span>
         <span class="d-block d-sm-none" i18n-title title="Allocation">%</span>
       </th>
-      <td *matCellDef="let element" class="px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
         <div class="d-flex justify-content-end">
           <gf-value
             [isLoading]="isLoading()"
@@ -184,13 +191,17 @@
     <ng-container matColumnDef="performance">
       <th
         *matHeaderCellDef
-        class="justify-content-end px-1"
+        class="d-none d-lg-table-cell justify-content-end px-1"
         mat-header-cell
         mat-sort-header="netPerformanceWithCurrencyEffect"
       >
         <ng-container i18n>Change</ng-container>
       </th>
-      <td *matCellDef="let element" class="px-1" mat-cell>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
         <div class="d-flex justify-content-end">
           <gf-value
             [colorizeSign]="true"
@@ -209,6 +220,8 @@
         class="justify-content-end px-1"
         mat-header-cell
         mat-sort-header="netPerformancePercentWithCurrencyEffect"
+        [class.d-lg-table-cell]="mode() === 'default'"
+        [class.d-none]="mode() === 'default'"
       >
         <span class="d-none d-sm-block" i18n>Performance</span>
         <span class="d-block d-sm-none" i18n-title title="Performance">±</span>
@@ -217,6 +230,8 @@
         *matCellDef="let element"
         class="px-1"
         mat-cell
+        [class.d-lg-table-cell]="mode() === 'default'"
+        [class.d-none]="mode() === 'default'"
         [class.text-nowrap]="mode() === 'simple'"
       >
         <div class="d-flex justify-content-end">

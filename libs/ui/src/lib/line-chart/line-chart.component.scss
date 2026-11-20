@@ -12,6 +12,17 @@
   }
 
   .date-range-selector {
+    // Let the options scroll horizontally on narrow screens instead of
+    // widening the host (and the dialog around it)
+    contain: inline-size;
     font-size: 0.9rem;
+    overflow-x: auto;
+
+    ::ng-deep .mat-mdc-radio-group {
+      flex-shrink: 0;
+      // Centered while the options fit, start-aligned once they overflow so
+      // that the first option stays reachable
+      margin-inline: auto;
+    }
   }
 }

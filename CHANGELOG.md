@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Restricted the updates and deletes by id of the investment plan (price alerts, DCA schedules, signals) to the plan of the user and the updates to the editable fields
 - Rejected an allocation group without symbols, which removed every symbol of the group
+- Improved the layout of the date range selector of the line chart on mobile to scroll horizontally instead of widening the holding detail dialog
+- Improved the layout of the activities table on mobile with a second line (quantity × unit price, fee, account, note) and expandable details including the actions
+- Improved the layout of the holdings table on mobile with a second line (symbol, value, allocation, quantity)
+- Improved the layout of the watchlist on mobile with the 50-day and 200-day trends below the name
 - Added a line with the symbol, data source, ISIN and currency below the value in the holding detail dialog
 - Upgraded `bootstrap` from version `4.6.2` to `5.3.8` (taken from the upstream commits `c169311fa` to `28713505f`) and migrated the classes of the pages of this fork (investment plan, portfolio summary, allocations, home overview, tables)
 - Changed the email language of the investment signal emails to the language of the account (_Settings → Language_) and the body to the table of the signals
