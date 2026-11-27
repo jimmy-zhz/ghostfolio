@@ -8,6 +8,8 @@
   display: flex;
   border-bottom: 1px solid rgba(var(--palette-foreground-base), 0.12);
   margin-bottom: 0;
+  // Five tabs are wider than a phone, scroll instead of widening the page
+  overflow-x: auto;
 
   .ip-tab-btn {
     border-radius: 0;

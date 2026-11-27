@@ -1,0 +1,543 @@
+@let currentReport = report();
+@let baseCurrency = user()?.settings?.baseCurrency;
+
+@if (isLoading()) {
+  <p class="text-body-secondary" i18n>Loading...</p>
+} @else if (currentReport) {
+  <!-- Sources: whose money -->
+  <mat-card appearance="outlined" class="mb-3">
+    <mat-card-header>
+      <mat-card-title i18n>Fund Sources</mat-card-title>
+      <mat-card-subtitle
+        ><ng-container i18n>Whose money it is</ng-container> ·
+        {{ baseCurrency }}</mat-card-subtitle
+      >
+    </mat-card-header>
+    <mat-card-content class="py-2">
+      @if (currentReport.sources.length === 0) {
+        <p class="text-body-secondary" i18n>
+          No fund sources yet. Add one below and tag its activities.
+        </p>
+      } @else {
+        <div class="fund-row fund-row-head d-none d-lg-flex">
+          <div class="fund-name" i18n>Source</div>
+          <div class="fund-number" i18n>Principal</div>
+          <div class="fund-number" i18n>Invested</div>
+          <div class="fund-number" i18n>Value</div>
+          <div class="fund-number" i18n>Return</div>
+          <div class="fund-distribution" i18n>Accounts</div>
+          <div class="fund-hint"></div>
+        </div>
+        @for (source of currentReport.sources; track source.id) {
+          <div
+            class="cursor-pointer fund-row"
+            role="button"
+            tabindex="0"
+            (click)="onToggle(source.id)"
+            (keydown.enter)="onToggle(source.id)"
+          >
+            <div class="fund-name">
+              <div class="text-truncate">
+                {{ source.name }}
+                @if (source.isRemainder) {
+                  <span class="small text-body-secondary" i18n
+                    >(remainder)</span
+                  >
+                }
+              </div>
+              <!-- Second line on small screens -->
+              <div class="d-lg-none small text-body-secondary">
+                {{ formatAmount(source.principal) }} ·
+                {{ formatAmount(source.investment) }} ·
+                <span
+                  [class.text-danger]="source.netPerformancePercent < 0"
+                  [class.text-success]="source.netPerformancePercent > 0"
+                  >{{ formatPercent(source.netPerformancePercent) }}</span
+                >
+                @if (hasGap(source.gap)) {
+                  ·
+                  <span class="text-warning"
+                    ><ng-container i18n>Gap</ng-container>
+                    {{ formatAmount(source.gap) }}</span
+                  >
+                }
+              </div>
+            </div>
+            <div class="d-none d-lg-block fund-number">
+              {{ formatAmount(source.principal) }}
+            </div>
+            <div class="d-none d-lg-block fund-number">
+              {{ formatAmount(source.investment) }}
+            </div>
+            <div class="fund-number">
+              {{ formatAmount(source.valueInBaseCurrency) }}
+            </div>
+            <div
+              class="d-none d-lg-block fund-number"
+              [class.text-danger]="source.netPerformance < 0"
+              [class.text-success]="source.netPerformance > 0"
+            >
+              {{ formatAmount(source.netPerformance) }}
+              <span class="small">{{
+                formatPercent(source.netPerformancePercent)
+              }}</span>
+            </div>
+            <div class="d-none d-lg-flex fund-distribution">
+              @for (segment of getDistribution(source); track segment.name) {
+                <div
+                  class="fund-distribution-segment"
+                  [style.background-color]="segment.color"
+                  [style.width.%]="segment.share * 100"
+                  [title]="
+                    segment.name +
+                    ': ' +
+                    formatAmount(segment.valueInBaseCurrency)
+                  "
+                ></div>
+              }
+            </div>
+            <div class="d-none d-lg-block fund-hint small text-warning">
+              @if (hasGap(source.gap)) {
+                <ng-container i18n>Gap</ng-container>
+                {{ formatAmount(source.gap) }}
+              }
+            </div>
+          </div>
+          @if (expandedId() === source.id) {
+            <div class="fund-details small">
+              @if (source.note) {
+                <div class="mb-2 text-body-secondary">{{ source.note }}</div>
+              }
+              <div class="fund-details-columns">
+                <div>
+                  <div class="fw-bold mb-1" i18n>Accounts</div>
+                  @for (
+                    segment of getDistribution(source);
+                    track segment.name
+                  ) {
+                    <div class="align-items-center d-flex gap-2">
+                      <span
+                        class="fund-legend"
+                        [style.background-color]="segment.color"
+                      ></span>
+                      <span class="flex-grow-1">{{ segment.name }}</span>
+                      <span>{{
+                        formatAmount(segment.valueInBaseCurrency)
+                      }}</span>
+                    </div>
+                  }
+                </div>
+                <div>
+                  <div class="fw-bold mb-1" i18n>Holdings</div>
+                  @for (holding of source.holdings; track holding.symbol) {
+                    <div class="d-flex gap-2">
+                      <span class="flex-grow-1 text-truncate">{{
+                        holding.symbol
+                      }}</span>
+                      <span>{{
+                        formatAmount(holding.valueInBaseCurrency)
+                      }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="mt-2 text-body-secondary">
+                <ng-container i18n>Tag</ng-container>: {{ source.tag.name }}
+              </div>
+            </div>
+          }
+        }
+        <div class="fund-row fund-row-total">
+          <div class="fund-name" i18n>Total</div>
+          <div class="d-none d-lg-block fund-number"></div>
+          <div class="d-none d-lg-block fund-number">
+            {{ formatAmount(currentReport.total.investment) }}
+          </div>
+          <div class="fund-number">
+            {{ formatAmount(currentReport.total.valueInBaseCurrency) }}
+          </div>
+          <div
+            class="d-none d-lg-block fund-number"
+            [class.text-danger]="currentReport.total.netPerformance < 0"
+            [class.text-success]="currentReport.total.netPerformance > 0"
+          >
+            {{ formatAmount(currentReport.total.netPerformance) }}
+          </div>
+          <div class="d-none d-lg-block fund-distribution"></div>
+          <div class="d-none d-lg-block fund-hint"></div>
+        </div>
+
+        <!-- Checks -->
+        @let checks = currentReport.checks;
+        @if (hasGap(checks.unassignedValueInBaseCurrency)) {
+          <div class="fund-check text-warning">
+            ⚠ {{ formatAmount(checks.unassignedValueInBaseCurrency) }}
+            <ng-container i18n
+              >of the value of the accounts belongs to no source.</ng-container
+            >
+          </div>
+        }
+        @for (
+          check of [
+            {
+              key: 'withoutSource',
+              label: withoutSourceLabel,
+              list: checks.activitiesWithoutSource
+            },
+            {
+              key: 'multipleSources',
+              label: multipleSourcesLabel,
+              list: checks.activitiesWithMultipleSources
+            }
+          ];
+          track check.key
+        ) {
+          @if (check.list.count > 0) {
+            <div
+              class="cursor-pointer fund-check text-warning"
+              role="button"
+              tabindex="0"
+              (click)="onToggleCheck(check.key)"
+              (keydown.enter)="onToggleCheck(check.key)"
+            >
+              ⚠ {{ check.list.count }} {{ check.label }}
+            </div>
+            @if (expandedCheck() === check.key) {
+              <div class="fund-details small">
+                @for (activity of check.list.activities; track activity.id) {
+                  <div class="d-flex flex-wrap gap-2">
+                    <span>{{ activity.date | date: 'yyyy-MM-dd' }}</span>
+                    <span>{{ activity.type }}</span>
+                    <span class="fw-bold">{{ activity.symbol }}</span>
+                    <span>{{ activity.quantity }}</span>
+                    <span class="text-body-secondary">{{
+                      activity.accountName
+                    }}</span>
+                  </div>
+                }
+                @if (check.list.count > check.list.activities.length) {
+                  <div class="text-body-secondary">…</div>
+                }
+              </div>
+            }
+          }
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Purposes: what the money is for -->
+  <mat-card appearance="outlined" class="mb-3">
+    <mat-card-header>
+      <mat-card-title i18n>Fund Purposes</mat-card-title>
+      <mat-card-subtitle
+        ><ng-container i18n>What the money is for</ng-container> ·
+        {{ baseCurrency }}</mat-card-subtitle
+      >
+    </mat-card-header>
+    <mat-card-content class="py-2">
+      @if (currentReport.purposes.length === 0) {
+        <p class="text-body-secondary" i18n>
+          No fund purposes yet. Add one below and tag the activities of its
+          holdings.
+        </p>
+      } @else {
+        <div class="fund-row fund-row-head d-none d-lg-flex">
+          <div class="fund-name" i18n>Purpose</div>
+          <div class="fund-number" i18n>Target</div>
+          <div class="fund-number" i18n>Value</div>
+          <div class="fund-progress" i18n>Progress</div>
+          <div class="fund-number" i18n>Target Date</div>
+          <div class="fund-distribution" i18n>Accounts</div>
+        </div>
+        @for (purpose of currentReport.purposes; track purpose.id) {
+          <div
+            class="cursor-pointer fund-row"
+            role="button"
+            tabindex="0"
+            (click)="onToggle(purpose.id)"
+            (keydown.enter)="onToggle(purpose.id)"
+          >
+            <div class="fund-name">
+              <div class="text-truncate">{{ purpose.name }}</div>
+              <!-- Second line on small screens -->
+              <div class="d-lg-none small text-body-secondary">
+                {{ formatAmount(purpose.valueInBaseCurrency) }} /
+                {{ formatAmount(purpose.targetAmount) }}
+                @if (purpose.targetDate) {
+                  · {{ purpose.targetDate | date: 'yyyy-MM' }}
+                }
+                @if (purpose.holdings.length > 0) {
+                  ·
+                  @for (
+                    holding of purpose.holdings;
+                    track holding.symbol;
+                    let last = $last
+                  ) {
+                    {{ holding.symbol }}{{ last ? '' : ', ' }}
+                  }
+                }
+              </div>
+            </div>
+            <div class="d-none d-lg-block fund-number">
+              {{ formatAmount(purpose.targetAmount) }}
+            </div>
+            <div class="d-none d-lg-block fund-number">
+              {{ formatAmount(purpose.valueInBaseCurrency) }}
+            </div>
+            <div class="fund-progress">
+              <div class="fund-progress-bar">
+                <div
+                  class="fund-progress-value"
+                  [style.width.%]="getProgressWidth(purpose.progress)"
+                ></div>
+              </div>
+              <span class="small">{{
+                purpose.targetAmount ? formatProgress(purpose.progress) : '—'
+              }}</span>
+            </div>
+            <div class="d-none d-lg-block fund-number small">
+              @if (purpose.targetDate) {
+                {{ purpose.targetDate | date: 'yyyy-MM' }}
+                @if (purpose.monthsLeft !== null) {
+                  <span class="text-body-secondary"
+                    >({{ purpose.monthsLeft }}
+                    <ng-container i18n>months left</ng-container>)</span
+                  >
+                }
+              }
+            </div>
+            <div class="d-none d-lg-flex fund-distribution">
+              @for (segment of getDistribution(purpose); track segment.name) {
+                <div
+                  class="fund-distribution-segment"
+                  [style.background-color]="segment.color"
+                  [style.width.%]="segment.share * 100"
+                  [title]="
+                    segment.name +
+                    ': ' +
+                    formatAmount(segment.valueInBaseCurrency)
+                  "
+                ></div>
+              }
+            </div>
+          </div>
+          @if (expandedId() === purpose.id) {
+            <div class="fund-details small">
+              @if (purpose.note) {
+                <div class="mb-2 text-body-secondary">{{ purpose.note }}</div>
+              }
+              <div class="fund-details-columns">
+                <div>
+                  <div class="fw-bold mb-1" i18n>Holdings</div>
+                  @for (holding of purpose.holdings; track holding.symbol) {
+                    <div class="d-flex gap-2">
+                      <span class="flex-grow-1 text-truncate">{{
+                        holding.symbol
+                      }}</span>
+                      <span>{{
+                        formatAmount(holding.valueInBaseCurrency)
+                      }}</span>
+                    </div>
+                  }
+                </div>
+                <div>
+                  <div class="fw-bold mb-1" i18n>Accounts</div>
+                  @for (
+                    segment of getDistribution(purpose);
+                    track segment.name
+                  ) {
+                    <div class="align-items-center d-flex gap-2">
+                      <span
+                        class="fund-legend"
+                        [style.background-color]="segment.color"
+                      ></span>
+                      <span class="flex-grow-1">{{ segment.name }}</span>
+                      <span>{{
+                        formatAmount(segment.valueInBaseCurrency)
+                      }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+              <div class="mt-2 text-body-secondary">
+                <ng-container i18n>Invested</ng-container>:
+                {{ formatAmount(purpose.investment) }} ·
+                <ng-container i18n>Return</ng-container>:
+                {{ formatPercent(purpose.netPerformancePercent) }} ·
+                <ng-container i18n>Tag</ng-container>: {{ purpose.tag.name }}
+              </div>
+            </div>
+          }
+        }
+        @let checks = currentReport.checks;
+        @for (
+          partial of checks.partialPurposes;
+          track partial.fundGroupId + partial.symbol
+        ) {
+          <div class="fund-check text-body-secondary">
+            ⓘ {{ partial.symbol }}:
+            {{ partial.untaggedCount }}
+            <ng-container i18n>activities are not in</ng-container>
+            {{ getFundGroupName(partial.fundGroupId) }}
+          </div>
+        }
+        @if (checks.activitiesWithMultiplePurposes.count > 0) {
+          <div class="fund-check text-warning">
+            ⚠ {{ checks.activitiesWithMultiplePurposes.count }}
+            <ng-container i18n
+              >activities have more than one purpose</ng-container
+            >
+          </div>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Manage the fund groups -->
+  <mat-card appearance="outlined" class="mb-3">
+    <mat-card-header>
+      <mat-card-title i18n>Manage Sources and Purposes</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="py-2">
+      @for (
+        fundGroup of [...currentReport.sources, ...currentReport.purposes];
+        track fundGroup.id
+      ) {
+        <div class="align-items-center d-flex fund-manage-row gap-2">
+          <span class="badge bg-secondary">{{
+            fundGroup.kind === 'SOURCE' ? sourceLabel : purposeLabel
+          }}</span>
+          <span class="flex-grow-1 text-truncate"
+            >{{ fundGroup.name }}
+            <span class="small text-body-secondary">{{
+              fundGroup.tag.name
+            }}</span></span
+          >
+          <button mat-button type="button" (click)="onEdit(fundGroup)">
+            <ng-container i18n>Edit</ng-container>
+          </button>
+          <button
+            color="warn"
+            mat-button
+            type="button"
+            (click)="onDelete(fundGroup)"
+          >
+            <ng-container i18n>Delete</ng-container>
+          </button>
+        </div>
+      }
+
+      @let currentForm = form();
+      @if (currentForm) {
+        <div class="fund-form mt-3">
+          <div class="fw-bold mb-2">
+            {{ currentForm.kind === 'SOURCE' ? sourceLabel : purposeLabel }}
+          </div>
+          <mat-form-field appearance="outline" class="w-100">
+            <mat-label i18n>Name</mat-label>
+            <input
+              matInput
+              [ngModel]="currentForm.name"
+              (ngModelChange)="updateForm({ name: $event })"
+            />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-100">
+            <mat-label i18n>Tag</mat-label>
+            <mat-select
+              [value]="currentForm.tagId"
+              (valueChange)="updateForm({ tagId: $event })"
+            >
+              @for (tag of ownTags(); track tag.id) {
+                <mat-option [value]="tag.id">{{ tag.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint i18n
+              >Create a tag in the Tags field of an activity, e.g. “Source ·
+              Mother”</mat-hint
+            >
+          </mat-form-field>
+          @if (currentForm.kind === 'SOURCE') {
+            <mat-checkbox
+              class="d-block my-2"
+              color="primary"
+              [checked]="currentForm.isRemainder"
+              (change)="updateForm({ isRemainder: $event.checked })"
+              ><ng-container i18n
+                >Remainder: the principal is everything not in another
+                source</ng-container
+              ></mat-checkbox
+            >
+            @if (!currentForm.isRemainder) {
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Principal</mat-label>
+                <input
+                  matInput
+                  min="0"
+                  type="number"
+                  [ngModel]="currentForm.principal"
+                  (ngModelChange)="updateForm({ principal: $event })"
+                />
+                <span matTextSuffix>{{ baseCurrency }}</span>
+              </mat-form-field>
+            }
+          } @else {
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Target Amount</mat-label>
+              <input
+                matInput
+                min="0"
+                type="number"
+                [ngModel]="currentForm.targetAmount"
+                (ngModelChange)="updateForm({ targetAmount: $event })"
+              />
+              <span matTextSuffix>{{ baseCurrency }}</span>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Target Date</mat-label>
+              <input
+                matInput
+                type="date"
+                [ngModel]="currentForm.targetDate"
+                (ngModelChange)="updateForm({ targetDate: $event })"
+              />
+            </mat-form-field>
+          }
+          <mat-form-field appearance="outline" class="w-100">
+            <mat-label i18n>Note</mat-label>
+            <input
+              matInput
+              [ngModel]="currentForm.note"
+              (ngModelChange)="updateForm({ note: $event })"
+            />
+          </mat-form-field>
+          <div class="d-flex gap-2 justify-content-end">
+            <button mat-button type="button" (click)="onCancel()">
+              <ng-container i18n>Cancel</ng-container>
+            </button>
+            <button
+              color="primary"
+              mat-flat-button
+              type="button"
+              [disabled]="
+                isSaving() || !currentForm.name.trim() || !currentForm.tagId
+              "
+              (click)="onSave()"
+            >
+              <ng-container i18n>Save</ng-container>
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button mat-stroked-button type="button" (click)="onAdd('SOURCE')">
+            <ng-container i18n>Add Source</ng-container>
+          </button>
+          <button mat-stroked-button type="button" (click)="onAdd('PURPOSE')">
+            <ng-container i18n>Add Purpose</ng-container>
+          </button>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}

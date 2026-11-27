@@ -23,6 +23,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { catchError, of } from 'rxjs';
 
+import { GfFundGroupsComponent } from './fund-groups/fund-groups.component';
+
 interface AllocationRow {
   groupId: string;
   name?: string;
@@ -64,12 +66,14 @@ interface PriceAlert {
   triggeredValue?: number | null;
 }
 
-export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
+export type InvestmentPlanTab =
+  'dca' | 'funds' | 'rebalancing' | 'settings' | 'signals';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    GfFundGroupsComponent,
     FormsModule,
     GfSymbolAutocompleteComponent,
     MatButtonModule,
@@ -88,7 +92,7 @@ export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
   templateUrl: './investment-plan-page.component.html'
 })
 export class GfInvestmentPlanPageComponent implements OnInit {
-  public activeTab: InvestmentPlanTab = 'rebalancing';
+  public activeTab: InvestmentPlanTab = 'funds';
   public allocationSymbolControls: FormControl<LookupItem | null>[] = [
     new FormControl<LookupItem | null>(null)
   ];

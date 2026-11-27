@@ -9,6 +9,15 @@
     <button
       class="ip-tab-btn"
       mat-button
+      [class.active]="activeTab === 'funds'"
+      (click)="setTab('funds')"
+      i18n
+    >
+      Funds
+    </button>
+    <button
+      class="ip-tab-btn"
+      mat-button
       [class.active]="activeTab === 'rebalancing'"
       (click)="setTab('rebalancing')"
       i18n
@@ -44,6 +53,15 @@
   </div>
 
   <div class="tab-content">
+    <!-- ── Funds: sources and purposes ── -->
+    @if (activeTab === 'funds') {
+      <div class="row mt-4">
+        <div class="col-lg-10">
+          <gf-fund-groups />
+        </div>
+      </div>
+    }
+
     <!-- ── Settings ── -->
     @if (activeTab === 'settings') {
       <div class="row mt-4">
