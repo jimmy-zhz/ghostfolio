@@ -567,6 +567,35 @@
                 <mat-label i18n>Name, symbol or ISIN</mat-label>
                 <gf-symbol-autocomplete [formControl]="priceAlertSymbolControl" />
               </mat-form-field>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Type</mat-label>
+                <mat-select [(ngModel)]="newPriceAlert.ruleType">
+                  <mat-option value="PRICE" i18n>Price</mat-option>
+                  <mat-option value="PCT_FROM_HIGH" i18n
+                    >Change from the high (%)</mat-option
+                  >
+                  <mat-option value="PCT_FROM_COST" i18n
+                    >Change vs. average cost (%)</mat-option
+                  >
+                  <mat-option value="DAILY_CHANGE" i18n
+                    >Daily change (%)</mat-option
+                  >
+                </mat-select>
+              </mat-form-field>
+              @if (newPriceAlert.ruleType === 'PCT_FROM_HIGH') {
+                <mat-form-field appearance="outline" class="w-100">
+                  <mat-label i18n>High of the last trading days</mat-label>
+                  <input
+                    matInput
+                    max="1000"
+                    min="2"
+                    step="1"
+                    type="number"
+                    [(ngModel)]="newPriceAlert.lookbackDays"
+                  />
+                  <mat-hint i18n>252 trading days are about 52 weeks</mat-hint>
+                </mat-form-field>
+              }
               <div class="d-flex gap-2">
                 <mat-form-field appearance="outline" style="width: 140px">
                   <mat-label i18n>Rule</mat-label>
@@ -581,13 +610,29 @@
                   <mat-label i18n>Value</mat-label>
                   <input
                     matInput
-                    min="0"
                     step="0.01"
                     type="number"
+                    [min]="newPriceAlert.ruleType === 'PRICE' ? 0 : null"
                     [(ngModel)]="newPriceAlert.targetValue"
                   />
+                  @if (newPriceAlert.ruleType !== 'PRICE') {
+                    <span matTextSuffix>%</span>
+                    <mat-hint i18n>e.g. -15 for 15% below</mat-hint>
+                  }
                 </mat-form-field>
               </div>
+              <mat-form-field appearance="outline" class="w-100">
+                <mat-label i18n>Action when it fires</mat-label>
+                <input
+                  matInput
+                  maxlength="200"
+                  [(ngModel)]="newPriceAlert.actionNote"
+                />
+                <mat-hint i18n
+                  >Sent along with the notification, e.g. the tranche to
+                  buy</mat-hint
+                >
+              </mat-form-field>
               <mat-form-field appearance="outline" class="w-100">
                 <mat-label i18n>Email message</mat-label>
                 <textarea
@@ -652,9 +697,9 @@
                   <div class="d-flex justify-content-between align-items-start">
                     <div>
                       <strong>{{ alert.name || alert.symbol }}</strong>
-                      <span class="ms-2 text-body-secondary"
-                        >{{ conditionLabel(alert.condition) }} {{ alert.targetValue }}</span
-                      >
+                      <span class="ms-2 text-body-secondary">{{
+                        describePriceAlertRule(alert)
+                      }}</span>
                     </div>
                     <button
                       mat-icon-button
@@ -664,12 +709,26 @@
                       delete
                     </button>
                   </div>
+                  @if (alert.actionNote) {
+                    <div class="small mt-1">
+                      <ng-container i18n>Action</ng-container>:
+                      {{ alert.actionNote }}
+                    </div>
+                  }
                   @if (alert.messageTemplate) {
                     <div class="text-body-secondary small mt-1">{{ alert.messageTemplate }}</div>
                   }
                   <div class="mt-2">
                     @if (alert.isActive) {
                       <span class="badge bg-success" i18n>Active</span>
+                      <!-- A daily change stays active and fires at most once a day -->
+                      @if (alert.ruleType === 'DAILY_CHANGE' && alert.triggeredAt) {
+                        <span class="ms-2 small text-body-secondary"
+                          ><ng-container i18n>Last fired</ng-container>
+                          {{ alert.triggeredValue }} @
+                          {{ alert.triggeredAt | date: 'yyyy-MM-dd HH:mm' }}</span
+                        >
+                      }
                     } @else {
                       <span class="badge bg-secondary me-2" i18n>Triggered</span>
                       @if (alert.triggeredAt) {
