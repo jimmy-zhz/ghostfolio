@@ -287,6 +287,7 @@ model Subscription {
 model Tag {
   accounts   TagsOnAccounts[]
   activities Order[]
+  fundGroups FundGroup[]
   id         String           @id @default(uuid())
   name       String
   user       User?            @relation(fields: [userId], onDelete: Cascade, references: [id])
@@ -451,6 +452,7 @@ model InvestmentPlan {
   userId               String                    @unique
   allocations          InvestmentPlanAllocation[]
   dcaSchedules         DcaSchedule[]
+  fundGroups           FundGroup[]
   priceAlerts          PriceAlert[]
   signals              InvestmentSignal[]
 }
@@ -503,6 +505,12 @@ model PriceAlert {
   isActive        Boolean        @default(true)
   triggeredAt     DateTime?
   triggeredValue  Float?
+  // How the value compared with targetValue is derived
+  ruleType        PriceAlertRuleType @default(PRICE)
+  // N of PCT_FROM_HIGH in trading days, default 252 (about 52 weeks)
+  lookbackDays    Int?
+  // What to do when the alert fires, sent along with the notification
+  actionNote      String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   plan            InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
@@ -510,6 +518,33 @@ model PriceAlert {
 
   @@index([planId])
   @@index([isActive])
+}
+
+// A source ("whose money") or a purpose ("what the money is for") of the
+// investments, defined by the tag of its activities
+model FundGroup {
+  id           String         @id @default(uuid())
+  kind         FundGroupKind
+  name         String
+  note         String?
+  sortOrder    Int            @default(0)
+  // Source only: agreed principal in the base currency
+  principal    Float?
+  // Source only: the principal is the total investment minus the principal
+  // of the other sources, at most one per plan
+  isRemainder  Boolean        @default(false)
+  // Purpose only: target amount in the base currency, optional target date
+  targetAmount Float?
+  targetDate   DateTime?
+  tag          Tag            @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId        String
+  plan         InvestmentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  planId       String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([planId, tagId])
+  @@index([planId])
 }
 
 model InvestmentSignal {
@@ -540,6 +575,18 @@ enum DcaSignalType {
   MA5
   RSI
   COMBINED
+}
+
+enum FundGroupKind {
+  SOURCE
+  PURPOSE
+}
+
+enum PriceAlertRuleType {
+  PRICE
+  PCT_FROM_HIGH
+  PCT_FROM_COST
+  DAILY_CHANGE
 }
 
 enum AlertCondition {
