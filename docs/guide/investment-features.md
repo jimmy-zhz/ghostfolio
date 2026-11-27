@@ -1,8 +1,12 @@
 # Investment Features
 
 This fork adds an investment planning layer on top of Ghostfolio: a **Capital Pool**,
-a **Systematic Investment Plan (DCA)**, **Rebalancing** advice, and a **Signals** feed.
-This page describes what each feature does and how to configure it.
+a **Systematic Investment Plan (DCA)**, **Rebalancing** advice, a **Signals** feed,
+**Fund Sources and Purposes** and **Price Alerts** with rules. This page describes what
+each feature does and how to configure it.
+
+The investment plan is a tab of the home page (_Overview, Holdings, Activities, Investment
+Plan, Watchlist_); Summary and Markets moved to the Portfolio tabs. Old links keep working.
 
 ## Capital Pool
 
@@ -92,3 +96,56 @@ reason, and date, and can be marked as:
 
 DCA signals are generated automatically every weekday morning; see
 [operations.md](operations.md).
+
+## Fund Sources and Purposes
+
+Accounts tell where the money is. Fund groups add two more views, on the _Funds_ tab of
+the investment plan:
+
+- A **source** tells whose money it is, e.g. a gift from your mother or money you keep for
+  someone. It has a principal. One source can be the **remainder**: everything not in
+  another source (e.g. "My savings"); its principal is worked out for you.
+- A **purpose** tells what the money is for, e.g. a car. It has a target amount and an
+  optional target date, and shows the progress. Several holdings can make up one purpose.
+
+Both are defined by **tags of the activities**. Create a tag by typing a new name into the
+Tags field of an activity (e.g. `Source · Mother`), or with _Edit Tags_ on the Activities
+page, which adds or removes one tag on many selected activities at once. Then add the source
+or purpose on the _Funds_ tab and pick its tag.
+
+Rules for tagging:
+
+1. Every buy, sell and dividend gets exactly one source tag, also your own money.
+2. A buy paid from two sources is recorded as two activities, split by quantity and fee.
+3. A sell is tagged with the source whose shares were sold.
+4. A purpose tag is optional, at most one per activity. If a whole holding belongs to a
+   purpose, tag all its activities; split only if part of one buy belongs to it.
+5. Tag activities, not accounts: a tag on an account counts every activity of the account.
+
+The tab shows, per source, the principal, the amount invested, the value, the return, the
+split across the accounts and the gap between principal and invested (money not invested
+yet, or an activity without its tag). A row expands to its accounts and holdings. Below,
+the checks list activities without a source or with several sources or purposes, and
+holdings of which only some activities carry a purpose tag.
+
+Cash in an account cannot be split by source; only the invested money can.
+
+## Price Alerts
+
+A price alert notifies you by email or webhook when its rule is met. Besides a fixed
+price, a rule can compare a percentage:
+
+| Rule | Compares | Example |
+| --- | --- | --- |
+| Price | the price | XUS.TO ≤ 40 |
+| Change from the high | the price with the highest close of the last N trading days (252 ≈ 52 weeks) | ≤ -15 (15% below the 52-week high) |
+| Change vs. average cost | the price with your average cost of the holding | ≥ 0 (back at cost) |
+| Daily change | the price with the previous close | ≤ -3 |
+
+Write what you plan to do in _Action when it fires_; the notification includes it along
+with the reference value, e.g. "-15.3% from the high of 47.20 (2026-09-18)".
+
+A price, high or cost alert fires once and is then off until you _Re-arm_ it. A daily
+change alert fires at most once a day and stays active. An alert whose data is missing
+(e.g. fewer closes than the trading days asked for) does not fire.
+

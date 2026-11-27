@@ -1,6 +1,6 @@
 # 2026-12 迭代：资金分组（来源、用途）+ 价格提醒规则 + 首页导航
 
-- 状态：需求已确认（2026-11-27），待用户 review 开发计划（第 5 节）后开始开发
+- 状态：已开发（分支 `feat/iteration-2026-12`），待 review；开发中的调整见第 9 节
 - 分支：开发时新开 `feat/iteration-2026-12`（基于 main），本文件所在的 `docs/iteration-2026-12` 只放文档
 - 来源：
   - 资金分组：2026-11-27 与 ghostfolio 会话的讨论（账户之外按“钱是谁的”“钱打算干什么”区分）
@@ -163,7 +163,7 @@ model FundGroup {
 
 （数字是示意。）
 
-- 点一行跳到持仓页，自动套上该分组的标签筛选。
+- 点一行在原地展开这个分组的账户和持仓（不跳到持仓页，原因见第 9 节）。
 - 点检查项跳到活动页，列出对应的交易。
 - 分布条悬停显示各账户金额。
 - 手机上按 [mobile-layout.md](mobile-layout.md) 的原则显示成两行：
@@ -175,20 +175,20 @@ model FundGroup {
 
 活动表在多选模式下加两个操作：“添加标签”“去掉标签”，一次选一个标签，作用于选中的所有交易。
 
-- 新接口 `PUT /activities/tags`，参数是交易 id 列表、标签 id、操作（加或去）。只处理当前用户自己的交易，按 ADR 0004 的规则校验。
+- 新接口 `PUT /activity-tags`（不是 `PUT /activities/tags`，见第 9 节），参数是交易 id 列表、标签 id、操作（加或去）。只处理当前用户自己的交易，按 ADR 0004 的规则校验。
 - 用于补现有 102 笔交易的来源标签，以后批量调整用途篮子也用得上。
 
 ### 2.8 MCP
 
 目的：让 agent 协助补 102 笔交易的标签、建和维护分组，用户只需要确认。
 
-| 工具                | 接口                                      | 读写       | 说明                                                                            |
-| ------------------- | ----------------------------------------- | ---------- | ------------------------------------------------------------------------------- |
-| `get_fund_groups`   | `GET /investment-plan/fund-groups`        | 读         | 2.5 的全部内容：来源、用途、检查项（含没有来源标签的交易列表）                  |
-| `create_tag`        | `POST /tags`                              | 写         | 建用户自己的标签（如 `来源·母亲赠予`）。`userId` 由工具从当前用户取，不让模型填 |
-| `upsert_fund_group` | `PUT /investment-plan/fund-groups`        | 写         | 建或改一个来源、用途                                                            |
-| `delete_fund_group` | `DELETE /investment-plan/fund-groups/:id` | 写、破坏性 | 只删分组定义，不动交易和标签                                                    |
-| `tag_activities`    | `PUT /activities/tags`                    | 写         | 给一批交易加或去掉一个标签，只改标签                                            |
+| 工具                | 接口                                      | 读写       | 说明                                                                                        |
+| ------------------- | ----------------------------------------- | ---------- | ------------------------------------------------------------------------------------------- |
+| `get_fund_groups`   | `GET /investment-plan/fund-groups`        | 读         | 2.5 的全部内容：来源、用途、检查项（含没有来源标签的交易列表）                              |
+| `create_tag`        | `POST /activity-tags/tags`                | 写         | 建用户自己的标签（如 `来源·母亲赠予`）。接口不收 `userId`，取当前用户；同名已存在就返回那个 |
+| `upsert_fund_group` | `PUT /investment-plan/fund-groups`        | 写         | 建或改一个来源、用途                                                                        |
+| `delete_fund_group` | `DELETE /investment-plan/fund-groups/:id` | 写、破坏性 | 只删分组定义，不动交易和标签                                                                |
+| `tag_activities`    | `PUT /activity-tags`                      | 写         | 给一批交易加或去掉一个标签，只改标签                                                        |
 
 - 已有标签和它们的 id 从 `get_user` 取（返回用户自己的标签），不用管理员才能读的 `GET /tags`。
 - **`tag_activities` 的边界**（这是 ADR 0002“交易不能通过 MCP 修改”的第一个例外，要写成新的 ADR 0005）：
@@ -201,7 +201,7 @@ model FundGroup {
   - 补来源标签时，要先按账户和日期把交易列给用户，由用户说明哪些属于哪份钱，agent 不能自己猜。
   - 每笔交易正好一个来源标签、最多一个用途标签：加来源标签前，先检查这笔交易有没有别的来源标签。
   - 改完调用 `get_fund_groups` 看检查项，把结果告诉用户。
-- 白名单 `MCP_ALLOWED_WRITES` 加上 `POST /api/v1/tags`、`PUT /api/v1/investment-plan/fund-groups`、`DELETE /api/v1/investment-plan/fund-groups/:id`、`PUT /api/v1/activities/tags`。
+- 白名单 `MCP_ALLOWED_WRITES` 加上 `POST /api/v1/activity-tags/tags`、`PUT /api/v1/investment-plan/fund-groups`、`DELETE /api/v1/investment-plan/fund-groups/:id`、`PUT /api/v1/activity-tags`。
 - 授权页文案加上“给交易加或去标签、维护资金分组，不能修改交易的金额、数量和日期”。
 
 ### 2.9 接口
@@ -211,7 +211,7 @@ model FundGroup {
 | `GET /investment-plan/fund-groups`        | 来源、用途的定义加计算结果和检查项（2.5） |
 | `PUT /investment-plan/fund-groups`        | 新建或修改一个分组（带 `id` 为修改）      |
 | `DELETE /investment-plan/fund-groups/:id` | 删除分组定义，不动交易和标签              |
-| `PUT /activities/tags`                    | 批量加或去掉一个标签（2.7）               |
+| `PUT /activity-tags`                      | 批量加或去掉一个标签（2.7）               |
 
 按 id 写的接口沿用本仓库的规则：只认当前用户计划里的记录，只接受可编辑字段（见 ADR 0004）。
 
@@ -361,7 +361,7 @@ Discord embed 加“规则”“参照”“动作”三个字段。
 - MCP：
   - 新参数的校验；`get_fund_groups` 的返回结构；工具清单、注解、白名单测试随之更新。
   - `tag_activities`：拒绝系统标签、拒绝别人的交易（整批拒绝）、超过 100 笔拒绝；只改标签。
-  - `create_tag` 的 `userId` 取当前用户，模型传入的值被忽略。
+  - `create_tag` 不传 `userId`，模型传入的值被丢掉；接口只建当前用户的标签。
 
 ## 7. 验收
 
@@ -390,3 +390,18 @@ Discord embed 加“规则”“参照”“动作”三个字段。
 | Q7  | 首页导航                   | 首页：Overview、Holdings、Activities、投资计划、Watchlist；Summary、Markets 移到 Portfolio    |
 | Q8  | 资金用途                   | 放进本迭代；按交易划分，几只股票可以组成一个用途篮子                                          |
 | Q9  | MCP 开放到什么程度         | 开放资金分组的增删改、建标签、给交易批量加或去标签（只改标签，不能用系统标签），让 agent 协助 |
+
+## 9. 开发中的调整（2026-11-27）
+
+| 项                 | 原计划                        | 实际                                                             | 原因                                                          |
+| ------------------ | ----------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
+| 批量打标签接口     | `PUT /activities/tags`        | `PUT /activity-tags`，放在本仓库自己的 `activity-tags` 模块      | 已有的 `PUT /activities/:id` 会先匹配；也不改上游的活动控制器 |
+| `create_tag`       | `POST /tags`，工具填 `userId` | 新接口 `POST /activity-tags/tags`，不收 `userId`，同名返回已有的 | MCP 拿不到用户 id，也不该让模型填别人的                       |
+| 点资金分组的一行   | 跳到持仓页并套上标签筛选      | 原地展开账户和持仓                                               | 持仓页的筛选是全局保存的用户设置，跳过去会悄悄改变其他页面    |
+| 资金分组卡片的位置 | 投资计划页                    | 投资计划页新增的“Funds”标签，排第一、默认打开                    | 投资计划页本身分标签；Funds 是最常看的                        |
+| 第 7、8 步         | 两个提交                      | 合成一个                                                         | 规则计算和通知共用同一个计算结果（参照值）                    |
+| 旧地址跳转         | `redirectTo` 字符串           | `redirectKeepingQueryParams`                                     | 字符串跳转会丢掉查询参数（持仓弹窗靠它打开）                  |
+| 投资计划页的标签栏 | —                             | 可以横向滚动                                                     | 五个标签比手机屏幕宽                                          |
+| 不做“来源构成”     | —                             | 维持                                                             | 见 2.4                                                        |
+
+本仓库改过的上游文件登记在 [upstream-touchpoints.md](../notes/upstream-touchpoints.md)。

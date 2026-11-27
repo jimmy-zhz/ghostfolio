@@ -23,6 +23,7 @@
 - [capital-pool.md](notes/capital-pool.md) — 资金池三层结构与各层含义
 - [dca.md](notes/dca.md) — DCA 四种策略的判断逻辑与测试用例
 - [rebalancing.md](notes/rebalancing.md) — 再平衡计算公式与测试用例
+- [upstream-touchpoints.md](notes/upstream-touchpoints.md) — 本仓库改过的上游文件，同步上游时逐个处理
 
 ## 约定
 
