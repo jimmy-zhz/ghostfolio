@@ -49,6 +49,67 @@
         </button>
       </form>
 
+      @if (canEditTags) {
+        <div
+          class="activities-tags-bar align-items-center d-flex flex-wrap mb-3"
+        >
+          @if (isEditingTags) {
+            <mat-form-field
+              appearance="outline"
+              class="filter-field without-hint"
+            >
+              <mat-label i18n>Tag</mat-label>
+              <mat-select [(value)]="selectedTagId">
+                @for (tag of ownTags; track tag.id) {
+                  <mat-option [value]="tag.id">{{ tag.name }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <button
+              color="primary"
+              mat-flat-button
+              type="button"
+              [disabled]="
+                !selectedTagId ||
+                selectedActivities.length === 0 ||
+                isUpdatingTags
+              "
+              (click)="onUpdateTags('ADD')"
+            >
+              <ng-container i18n
+                >Add to {{ selectedActivities.length }} selected</ng-container
+              >
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="
+                !selectedTagId ||
+                selectedActivities.length === 0 ||
+                isUpdatingTags
+              "
+              (click)="onUpdateTags('REMOVE')"
+            >
+              <ng-container i18n
+                >Remove from
+                {{ selectedActivities.length }} selected</ng-container
+              >
+            </button>
+            <button mat-button type="button" (click)="onToggleEditTags()">
+              <ng-container i18n>Done</ng-container>
+            </button>
+          } @else {
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="onToggleEditTags()"
+            >
+              <ng-container i18n>Edit Tags</ng-container>...
+            </button>
+          }
+        </div>
+      }
+
       <gf-activities-table
         [activityTypes]="user?.activityTypes"
         [baseCurrency]="user?.settings?.baseCurrency"
@@ -70,6 +131,7 @@
             hasPermissionToUpdateActivity) &&
           !user.settings.isRestrictedView
         "
+        [showCheckbox]="isEditingTags"
         [sortColumn]="sortColumn"
         [sortDirection]="sortDirection"
         [totalItems]="totalItems"
@@ -81,6 +143,7 @@
         (import)="onImport()"
         (importDividends)="onImportDividends()"
         (pageChanged)="onChangePage($event)"
+        (selectedActivities)="onSelectedActivities($event)"
         (sortChanged)="onSortChanged($event)"
         (typesFilterChanged)="onTypesFilterChanged($event)"
       />

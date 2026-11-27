@@ -1022,6 +1022,28 @@ export class DataService {
     return this.http.delete<any>(`/api/v1/investment-plan/price-alert/${id}`);
   }
 
+  public fetchFundGroups() {
+    return this.http.get<any>('/api/v1/investment-plan/fund-groups');
+  }
+
+  public putFundGroup(data: Record<string, unknown>) {
+    return this.http.put<any>('/api/v1/investment-plan/fund-groups', data);
+  }
+
+  public deleteFundGroup(id: string) {
+    return this.http.delete<any>(
+      `/api/v1/investment-plan/fund-groups/${encodeURIComponent(id)}`
+    );
+  }
+
+  public putActivityTags(data: {
+    action: 'ADD' | 'REMOVE';
+    activityIds: string[];
+    tagId: string;
+  }) {
+    return this.http.put<{ count: number }>('/api/v1/activity-tags', data);
+  }
+
   public fetchAiConfig() {
     return this.http.get<{
       apiKey: string;

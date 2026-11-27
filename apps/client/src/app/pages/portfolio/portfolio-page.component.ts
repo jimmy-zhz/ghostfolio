@@ -17,10 +17,10 @@ import { addIcons } from 'ionicons';
 import {
   analyticsOutline,
   calculatorOutline,
-  calendarOutline,
+  newspaperOutline,
   pieChartOutline,
-  scanOutline,
-  swapVerticalOutline
+  readerOutline,
+  scanOutline
 } from 'ionicons/icons';
 
 @Component({
@@ -46,21 +46,9 @@ export class PortfolioPageComponent {
         if (state?.user) {
           this.tabs = [
             {
-              iconName: 'calendar-outline',
-              label: internalRoutes.portfolio.subRoutes.investmentPlan.title,
-              routerLink:
-                internalRoutes.portfolio.subRoutes.investmentPlan.routerLink
-            },
-            {
               iconName: 'analytics-outline',
               label: internalRoutes.portfolio.subRoutes.analysis.title,
               routerLink: internalRoutes.portfolio.subRoutes.analysis.routerLink
-            },
-            {
-              iconName: 'swap-vertical-outline',
-              label: internalRoutes.portfolio.subRoutes.activities.title,
-              routerLink:
-                internalRoutes.portfolio.subRoutes.activities.routerLink
             },
             {
               iconName: 'pie-chart-outline',
@@ -77,6 +65,18 @@ export class PortfolioPageComponent {
               iconName: 'scan-outline',
               label: internalRoutes.portfolio.subRoutes.xRay.title,
               routerLink: internalRoutes.portfolio.subRoutes.xRay.routerLink
+            },
+            // Fork: summary and markets moved here from home, activities and
+            // the investment plan moved there
+            {
+              iconName: 'reader-outline',
+              label: internalRoutes.home.subRoutes.summary.title,
+              routerLink: internalRoutes.home.subRoutes.summary.routerLink
+            },
+            {
+              iconName: 'newspaper-outline',
+              label: internalRoutes.home.subRoutes.markets.title,
+              routerLink: internalRoutes.home.subRoutes.markets.routerLink
             }
           ];
           this.user = state.user;
@@ -87,11 +87,11 @@ export class PortfolioPageComponent {
 
     addIcons({
       analyticsOutline,
-      calendarOutline,
       calculatorOutline,
+      newspaperOutline,
       pieChartOutline,
-      scanOutline,
-      swapVerticalOutline
+      readerOutline,
+      scanOutline
     });
   }
 }

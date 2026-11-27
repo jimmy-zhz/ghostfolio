@@ -9,12 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added fund sources (whose money it is) and purposes (what it is for) on a Funds tab of the investment plan, defined by tags of the activities, with principal, value, return, split across accounts, progress and checks
+- Added an Edit Tags mode to the activities page to add or remove a tag on many activities at once (`PUT /api/v1/activity-tags`)
+- Added the price alert rules change from the N-day high, change vs. average cost and daily change, with an action note sent along with the notification
+- Added the MCP tools `get_fund_groups`, `create_tag`, `upsert_fund_group`, `delete_fund_group` and `tag_activities` (only the tags of activities, see ADR 0005), and the rule parameters to the price alert tools
 - Added write tools for the investment plan to the MCP server: price alerts (create, update, rearm, delete), the status of a DCA signal, DCA schedules (create, update, delete) and target allocation groups (upsert, delete); the plan itself (capital pool) stays UI only
 - Merged the upstream release `3.86.0` (2026-10-13) into this fork, including the Angular 22 and Prisma 7 `prisma-client` generator upgrades, the liveness probe and the graceful shutdown
 - Extended the date ranges with `1w`, `1m`, `3m`, `6m`, `2y` and `10y` (line charts, activities and MCP tools)
 
 ### Changed
 
+- Moved Activities and the Investment Plan to the tabs of the home page, Summary and Markets to the tabs of the portfolio; the old addresses redirect
 - Restricted the updates and deletes by id of the investment plan (price alerts, DCA schedules, signals) to the plan of the user and the updates to the editable fields
 - Rejected an allocation group without symbols, which removed every symbol of the group
 - Improved the layout of the date range selector of the line chart on mobile to scroll horizontally instead of widening the holding detail dialog

@@ -135,6 +135,28 @@ describe('GfActivitiesTableComponent', () => {
     });
   });
 
+  describe('with the checkboxes switched on later', () => {
+    beforeEach(async () => {
+      await setup({ isSmallScreen: false });
+    });
+
+    it('selects a row on click instead of opening the holding', () => {
+      const activityClicked = jest.spyOn(component.activityClicked, 'emit');
+      const selectedActivities = jest.spyOn(
+        component.selectedActivities,
+        'emit'
+      );
+
+      fixture.componentRef.setInput('showCheckbox', true);
+      fixture.detectChanges();
+
+      component.onClickActivity(activity);
+
+      expect(activityClicked).not.toHaveBeenCalled();
+      expect(selectedActivities).toHaveBeenLastCalledWith([activity]);
+    });
+  });
+
   describe('on a large screen', () => {
     beforeEach(async () => {
       await setup({ isSmallScreen: false });

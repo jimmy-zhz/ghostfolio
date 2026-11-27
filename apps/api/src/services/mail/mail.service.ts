@@ -1,4 +1,9 @@
 import { ConfigurationService } from '@ghostfolio/api/services/configuration/configuration.service';
+import {
+  PriceAlertEvaluation,
+  describePriceAlertEvaluation,
+  describePriceAlertRule
+} from '@ghostfolio/common/price-alert-rule';
 
 import { Injectable, Logger } from '@nestjs/common';
 import { AlertCondition, InvestmentSignal, PriceAlert } from '@prisma/client';
@@ -57,14 +62,14 @@ export class MailService {
   public async sendPriceAlertEmail(
     toEmail: string,
     alert: PriceAlert,
-    currentValue: number
+    currentValue: number,
+    evaluation?: PriceAlertEvaluation
   ): Promise<boolean> {
     const smtpUser = this.configurationService.get('SMTP_USER');
     if (!smtpUser || !toEmail) return false;
 
     try {
       const displayName = alert.name || alert.symbol;
-      const conditionLabel = this.getConditionLabel(alert.condition);
       const isAbove =
         alert.condition === AlertCondition.GREATER_THAN ||
         alert.condition === AlertCondition.GREATER_THAN_OR_EQUAL;
@@ -77,13 +82,14 @@ export class MailService {
         targetValue: String(alert.targetValue)
       });
 
-      const subject = `[Ghostfolio] 🔔 Price Alert: ${displayName} ${conditionLabel} ${alert.targetValue}`;
+      const rule = describePriceAlertRule(alert);
+      const subject = `[Ghostfolio] 🔔 Price Alert: ${displayName} ${rule}`;
 
       const html = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background:${accentColor};color:#fff;padding:20px;border-radius:8px 8px 0 0;text-align:center;">
           <div style="font-size:28px;font-weight:700;">🔔 ${displayName}</div>
-          <div style="font-size:16px;margin-top:6px;">${isAbove ? '↑' : '↓'} ${conditionLabel} ${alert.targetValue}</div>
+          <div style="font-size:16px;margin-top:6px;">${isAbove ? '↑' : '↓'} ${escapeHtml(rule)}</div>
         </div>
         <div style="border:1px solid #eee;border-top:none;border-radius:0 0 8px 8px;padding:20px;">
           <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
@@ -92,10 +98,19 @@ export class MailService {
               <td style="padding:8px;font-size:22px;font-weight:700;color:${accentColor};text-align:right;">${currentValue.toFixed(2)}</td>
             </tr>
             <tr>
-              <td style="padding:8px;color:#666;">Threshold</td>
-              <td style="padding:8px;text-align:right;">${conditionLabel} ${alert.targetValue}</td>
+              <td style="padding:8px;color:#666;">Rule</td>
+              <td style="padding:8px;text-align:right;">${escapeHtml(rule)}</td>
             </tr>
+            ${
+              evaluation?.reference
+                ? `<tr>
+              <td style="padding:8px;color:#666;">Reference</td>
+              <td style="padding:8px;text-align:right;">${escapeHtml(describePriceAlertEvaluation(evaluation))}</td>
+            </tr>`
+                : ''
+            }
           </table>
+          ${alert.actionNote ? `<p style="font-size:16px;font-weight:600;background:#e8f0fe;padding:12px;border-radius:6px;border-left:4px solid #1a73e8;">Action: ${escapeHtml(alert.actionNote)}</p>` : ''}
           ${message ? `<p style="font-size:16px;font-weight:600;background:#fff8e1;padding:12px;border-radius:6px;border-left:4px solid #f9ab00;">${message}</p>` : ''}
           <p style="color:#888;font-size:12px;margin-top:16px">⚠️ For informational purposes only. Not investment advice.</p>
         </div>
@@ -136,21 +151,6 @@ export class MailService {
     );
   }
 
-  private getConditionLabel(condition: AlertCondition): string {
-    switch (condition) {
-      case AlertCondition.GREATER_THAN:
-        return '>';
-      case AlertCondition.GREATER_THAN_OR_EQUAL:
-        return '≥';
-      case AlertCondition.LESS_THAN:
-        return '<';
-      case AlertCondition.LESS_THAN_OR_EQUAL:
-        return '≤';
-      default:
-        return '';
-    }
-  }
-
   private buildSignalsHtml(language: string, signals: InvestmentSignal[]): string {
     const isZh = language === 'zh';
     const rows = signals.map((s) => `
@@ -178,4 +178,12 @@ export class MailService {
       </p>
     </div>`;
   }
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

@@ -22,7 +22,11 @@ export const MCP_ALLOWED_WRITES = [
   'PUT /api/v1/investment-plan/dca/:id',
   'DELETE /api/v1/investment-plan/dca/:id',
   'PUT /api/v1/investment-plan/allocation-group',
-  'DELETE /api/v1/investment-plan/allocation-group/:groupId'
+  'DELETE /api/v1/investment-plan/allocation-group/:groupId',
+  'POST /api/v1/activity-tags/tags',
+  'PUT /api/v1/investment-plan/fund-groups',
+  'DELETE /api/v1/investment-plan/fund-groups/:id',
+  'PUT /api/v1/activity-tags'
 ];
 
 export type McpHttpMethod = 'DELETE' | 'GET' | 'POST' | 'PUT';

@@ -66,3 +66,30 @@ describe('toPriceAlertUpdate', () => {
     ).toEqual({ targetValue: 42 });
   });
 });
+
+describe('toPriceAlertUpdate with a rule', () => {
+  it('takes the rule fields', () => {
+    expect(
+      toPriceAlertUpdate({
+        actionNote: ' Buy tranche 5 ',
+        lookbackDays: 252,
+        ruleType: 'PCT_FROM_HIGH',
+        targetValue: -15
+      })
+    ).toEqual({
+      actionNote: 'Buy tranche 5',
+      lookbackDays: 252,
+      ruleType: 'PCT_FROM_HIGH',
+      targetValue: -15
+    });
+  });
+
+  it.each([
+    { ruleType: 'MA_CROSS' },
+    { lookbackDays: 1 },
+    { lookbackDays: 2.5 },
+    { actionNote: 42 }
+  ])('rejects %j', (body) => {
+    expect(() => toPriceAlertUpdate(body)).toThrow(BadRequestException);
+  });
+});

@@ -1,4 +1,10 @@
 import { LookupItem } from '@ghostfolio/common/interfaces';
+import {
+  PRICE_ALERT_DEFAULT_LOOKBACK_DAYS,
+  PriceAlertCondition,
+  PriceAlertRuleType,
+  describePriceAlertRule
+} from '@ghostfolio/common/price-alert-rule';
 import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
 import { DataService } from '@ghostfolio/ui/services';
 
@@ -22,6 +28,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { catchError, of } from 'rxjs';
+
+import { GfFundGroupsComponent } from './fund-groups/fund-groups.component';
 
 interface AllocationRow {
   groupId: string;
@@ -52,24 +60,29 @@ interface DcaSchedule {
 }
 
 interface PriceAlert {
-  condition: string;
+  actionNote?: string | null;
+  condition: PriceAlertCondition;
   dataSource: string;
   id?: string;
   isActive?: boolean;
+  lookbackDays?: number | null;
   messageTemplate: string;
   name?: string;
+  ruleType?: PriceAlertRuleType;
   symbol: string;
   targetValue: number;
   triggeredAt?: string | null;
   triggeredValue?: number | null;
 }
 
-export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
+export type InvestmentPlanTab =
+  'dca' | 'funds' | 'rebalancing' | 'settings' | 'signals';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
+    GfFundGroupsComponent,
     FormsModule,
     GfSymbolAutocompleteComponent,
     MatButtonModule,
@@ -88,7 +101,7 @@ export type InvestmentPlanTab = 'settings' | 'rebalancing' | 'dca' | 'signals';
   templateUrl: './investment-plan-page.component.html'
 })
 export class GfInvestmentPlanPageComponent implements OnInit {
-  public activeTab: InvestmentPlanTab = 'rebalancing';
+  public activeTab: InvestmentPlanTab = 'funds';
   public allocationSymbolControls: FormControl<LookupItem | null>[] = [
     new FormControl<LookupItem | null>(null)
   ];
@@ -115,11 +128,7 @@ export class GfInvestmentPlanPageComponent implements OnInit {
   };
   public priceAlertSymbolControl = new FormControl<LookupItem | null>(null);
   public priceAlerts: PriceAlert[] = [];
-  public newPriceAlert: Omit<PriceAlert, 'dataSource' | 'name' | 'symbol'> = {
-    condition: 'LESS_THAN_OR_EQUAL',
-    messageTemplate: '',
-    targetValue: 0
-  };
+  public newPriceAlert = this.getEmptyPriceAlert();
   public plan: {
     capitalPool: number;
     cashBuffer: number;
@@ -270,12 +279,22 @@ export class GfInvestmentPlanPageComponent implements OnInit {
 
   public onAddPriceAlert() {
     const item = this.priceAlertSymbolControl.value;
-    if (!item?.symbol || !item?.dataSource || this.newPriceAlert.targetValue <= 0) {
+    // A price is above 0, the percentage of the other rules can be negative
+    if (
+      !item?.symbol ||
+      !item?.dataSource ||
+      (this.newPriceAlert.ruleType === 'PRICE' &&
+        this.newPriceAlert.targetValue <= 0)
+    ) {
       return;
     }
     this.dataService
       .postInvestmentPlanPriceAlert({
         ...this.newPriceAlert,
+        lookbackDays:
+          this.newPriceAlert.ruleType === 'PCT_FROM_HIGH'
+            ? this.newPriceAlert.lookbackDays
+            : null,
         dataSource: item.dataSource,
         name: item.name,
         symbol: item.symbol
@@ -283,13 +302,13 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.priceAlertSymbolControl.reset();
-        this.newPriceAlert = {
-          condition: 'LESS_THAN_OR_EQUAL',
-          messageTemplate: '',
-          targetValue: 0
-        };
+        this.newPriceAlert = this.getEmptyPriceAlert();
         this.loadPlan();
       });
+  }
+
+  public describePriceAlertRule(alert: PriceAlert) {
+    return describePriceAlertRule(alert);
   }
 
   public onDeletePriceAlert(id: string) {
@@ -324,16 +343,6 @@ export class GfInvestmentPlanPageComponent implements OnInit {
       const cursor = start + token.length;
       textarea.setSelectionRange(cursor, cursor);
     });
-  }
-
-  public conditionLabel(condition: string): string {
-    const map: Record<string, string> = {
-      GREATER_THAN: '>',
-      GREATER_THAN_OR_EQUAL: '≥',
-      LESS_THAN: '<',
-      LESS_THAN_OR_EQUAL: '≤'
-    };
-    return map[condition] ?? condition;
   }
 
   public onDismissSignal(id: string) {
@@ -450,5 +459,16 @@ export class GfInvestmentPlanPageComponent implements OnInit {
         this.rebalancingResult = result;
         this.changeDetectorRef.markForCheck();
       });
+  }
+
+  private getEmptyPriceAlert(): Omit<PriceAlert, 'dataSource' | 'name' | 'symbol'> {
+    return {
+      actionNote: '',
+      condition: 'LESS_THAN_OR_EQUAL',
+      lookbackDays: PRICE_ALERT_DEFAULT_LOOKBACK_DAYS,
+      messageTemplate: '',
+      ruleType: 'PRICE',
+      targetValue: 0
+    };
   }
 }

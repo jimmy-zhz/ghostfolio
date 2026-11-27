@@ -37,6 +37,7 @@ import { join } from 'node:path';
 import { AccessModule } from './access/access.module';
 import { AccountModule } from './account/account.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { ActivityTagsModule } from './activity-tags/activity-tags.module';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AssetModule } from './asset/asset.module';
@@ -78,6 +79,7 @@ import { UserModule } from './user/user.module';
     AccessModule,
     AccountModule,
     ActivitiesModule,
+    ActivityTagsModule,
     AiModule,
     ApiKeysModule,
     AssetProfilesModule,

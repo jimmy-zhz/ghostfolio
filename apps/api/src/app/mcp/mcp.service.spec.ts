@@ -27,7 +27,11 @@ const WRITE_TOOLS = [
   'update_dca_schedule',
   'delete_dca_schedule',
   'upsert_allocation_group',
-  'delete_allocation_group'
+  'delete_allocation_group',
+  'create_tag',
+  'upsert_fund_group',
+  'delete_fund_group',
+  'tag_activities'
 ];
 
 describe('buildApiPath', () => {
@@ -157,7 +161,8 @@ describe('McpService', () => {
       'delete_dca_schedule',
       // Replacing a group removes the symbols left out
       'upsert_allocation_group',
-      'delete_allocation_group'
+      'delete_allocation_group',
+      'delete_fund_group'
     ]);
     expect(
       tools
@@ -167,7 +172,8 @@ describe('McpService', () => {
       'create_activity',
       'create_price_alert',
       'create_dca_schedule',
-      'upsert_allocation_group'
+      'upsert_allocation_group',
+      'upsert_fund_group'
     ]);
     expect(
       tools
@@ -199,6 +205,40 @@ describe('McpService', () => {
       `/api/v1/investment-plan/price-alert/${ALERT_ID}`
     );
     expect(JSON.parse(body)).toEqual({ isActive: false, targetValue: 42 });
+  });
+
+  it('creates a price alert with a rule and a negative percentage', async () => {
+    responseBody = JSON.stringify({ id: ALERT_ID });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    const args = {
+      actionNote: 'Buy tranches 5 and 6',
+      condition: 'LESS_THAN_OR_EQUAL',
+      dataSource: 'YAHOO',
+      lookbackDays: 252,
+      ruleType: 'PCT_FROM_HIGH',
+      symbol: 'XUS.TO',
+      targetValue: -15
+    };
+    const result = await client.callTool({
+      arguments: args,
+      name: 'create_price_alert'
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(JSON.parse(body)).toEqual(args);
+
+    const invalid = await client.callTool({
+      arguments: { ...args, ruleType: 'MA_CROSS' },
+      name: 'create_price_alert'
+    });
+
+    expect(invalid.isError).toBe(true);
+    expect(received).toHaveLength(1);
   });
 
   it('replays delete_dca_schedule as a DELETE without a body', async () => {
@@ -263,6 +303,67 @@ describe('McpService', () => {
     expect(invalidDate.isError).toBe(true);
     expect(invalidDataSource.isError).toBe(true);
     expect(received).toHaveLength(0);
+  });
+
+  it('replays tag_activities as a PUT with the activities in the body', async () => {
+    responseBody = JSON.stringify({ action: 'ADD', count: 2, tagId: 'tag-1' });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    const args = {
+      action: 'ADD',
+      activityIds: [ALERT_ID, '6ba7b810-9dad-41d1-80b4-00c04fd430c8'],
+      tagId: 'tag-1'
+    };
+    const result = await client.callTool({
+      arguments: args,
+      name: 'tag_activities'
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(received[0].method).toBe('PUT');
+    expect(received[0].url).toBe('/api/v1/activity-tags');
+    expect(JSON.parse(body)).toEqual(args);
+  });
+
+  it('rejects more than 100 activities or an unknown action before calling the API', async () => {
+    const tooMany = await client.callTool({
+      arguments: {
+        action: 'ADD',
+        activityIds: Array.from({ length: 101 }, () => ALERT_ID),
+        tagId: 'tag-1'
+      },
+      name: 'tag_activities'
+    });
+    const unknownAction = await client.callTool({
+      arguments: { action: 'SET', activityIds: [ALERT_ID], tagId: 'tag-1' },
+      name: 'tag_activities'
+    });
+
+    expect(tooMany.isError).toBe(true);
+    expect(unknownAction.isError).toBe(true);
+    expect(received).toHaveLength(0);
+  });
+
+  it('creates a tag without a user id, the API takes the signed-in user', async () => {
+    responseBody = JSON.stringify({ id: 'tag-1', name: 'Source · Mother' });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    await client.callTool({
+      arguments: { name: 'Source · Mother', userId: 'someone-else' },
+      name: 'create_tag'
+    });
+
+    expect(received[0].method).toBe('POST');
+    expect(received[0].url).toBe('/api/v1/activity-tags/tags');
+    expect(JSON.parse(body)).toEqual({ name: 'Source · Mother' });
   });
 
   it('rejects an id that is not a UUID before calling the API', async () => {
@@ -489,7 +590,11 @@ describe('write allowlist', () => {
       ['PUT', `/api/v1/investment-plan/dca/${ALERT_ID}`],
       ['DELETE', `/api/v1/investment-plan/dca/${ALERT_ID}`],
       ['PUT', '/api/v1/investment-plan/allocation-group'],
-      ['DELETE', '/api/v1/investment-plan/allocation-group/group-1']
+      ['DELETE', '/api/v1/investment-plan/allocation-group/group-1'],
+      ['POST', '/api/v1/activity-tags/tags'],
+      ['PUT', '/api/v1/investment-plan/fund-groups'],
+      ['DELETE', `/api/v1/investment-plan/fund-groups/${ALERT_ID}`],
+      ['PUT', '/api/v1/activity-tags']
     ]) {
       expect(() => assertRequestAllowed({ method, path })).not.toThrow();
     }
@@ -513,7 +618,13 @@ describe('write allowlist', () => {
       ['PUT', `/api/v1/investment-plan/price-alert/${ALERT_ID}?x=1`],
       ['DELETE', '/api/v1/investment-plan/allocation-group/'],
       ['PATCH', `/api/v1/investment-plan/dca/${ALERT_ID}`],
-      ['POST', `/api/v1/investment-plan/dca/${ALERT_ID}`]
+      ['POST', `/api/v1/investment-plan/dca/${ALERT_ID}`],
+      // The tags of activities only, never an activity itself or a system tag
+      ['PUT', `/api/v1/activities/${ALERT_ID}`],
+      ['POST', '/api/v1/tags'],
+      ['PUT', '/api/v1/tags/EXCLUDE_FROM_ANALYSIS'],
+      ['DELETE', '/api/v1/activity-tags'],
+      ['DELETE', '/api/v1/investment-plan/fund-groups']
     ]) {
       expect(() => assertRequestAllowed({ method, path })).toThrow(
         'is not allowed through MCP'
