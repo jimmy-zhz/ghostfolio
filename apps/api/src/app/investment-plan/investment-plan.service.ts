@@ -1,4 +1,9 @@
 import { PrismaService } from '@ghostfolio/api/services/prisma/prisma.service';
+import {
+  PriceAlertEvaluation,
+  describePriceAlertEvaluation,
+  describePriceAlertRule
+} from '@ghostfolio/common/price-alert-rule';
 
 import { randomUUID } from 'node:crypto';
 
@@ -280,13 +285,6 @@ export class InvestmentPlanService {
   }
 }
 
-const CONDITION_LABELS: Record<string, string> = {
-  GREATER_THAN: '>',
-  GREATER_THAN_OR_EQUAL: '≥',
-  LESS_THAN: '<',
-  LESS_THAN_OR_EQUAL: '≤'
-};
-
 const SIGNAL_LABELS: Record<string, string> = {
   DCA_BUY: '🟢 DCA Buy',
   DCA_WAIT: '⏸️ DCA Wait',
@@ -319,6 +317,7 @@ export function toDiscordPayload(
   if (payload.event === 'price_alert') {
     const alert = payload.alert as PriceAlert;
     const currentValue = payload.currentValue as number;
+    const evaluation = payload.evaluation as PriceAlertEvaluation | undefined;
     const displayName = alert.name || alert.symbol;
     const isAbove = alert.condition.startsWith('GREATER_THAN');
 
@@ -330,9 +329,21 @@ export function toDiscordPayload(
             { inline: true, name: 'Current', value: currentValue.toFixed(2) },
             {
               inline: true,
-              name: 'Threshold',
-              value: `${CONDITION_LABELS[alert.condition] ?? alert.condition} ${alert.targetValue}`
-            }
+              name: 'Rule',
+              value: describePriceAlertRule(alert)
+            },
+            ...(evaluation?.reference
+              ? [
+                  {
+                    inline: false,
+                    name: 'Reference',
+                    value: describePriceAlertEvaluation(evaluation)
+                  }
+                ]
+              : []),
+            ...(alert.actionNote
+              ? [{ inline: false, name: 'Action', value: alert.actionNote }]
+              : [])
           ],
           timestamp: new Date().toISOString(),
           title: `🔔 Price Alert: ${displayName}`

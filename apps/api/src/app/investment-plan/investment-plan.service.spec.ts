@@ -73,9 +73,58 @@ describe('InvestmentPlanService.sendWebhook', () => {
     expect(body.embeds[0].title).toBe('🔔 Price Alert: BTCUSD');
     expect(body.embeds[0].fields).toEqual([
       { inline: true, name: 'Current', value: '86123.50' },
-      { inline: true, name: 'Threshold', value: '≥ 85000' }
+      { inline: true, name: 'Rule', value: 'Price ≥ 85000' }
     ]);
     expect(body.event).toBeUndefined();
+  });
+
+  it('adds the reference and the action of a rule to the Discord embed', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock as any;
+
+    await svc.sendWebhook('https://discord.com/api/webhooks/123/token-abc', {
+      alert: {
+        actionNote: 'Buy tranches 5 and 6 of the plan',
+        condition: 'LESS_THAN_OR_EQUAL',
+        name: null,
+        ruleType: 'PCT_FROM_HIGH',
+        symbol: 'XUS.TO',
+        targetValue: -15
+      },
+      currentValue: 39.98,
+      evaluation: {
+        currentPrice: 39.98,
+        metric: -15.29,
+        reference: {
+          date: new Date(Date.UTC(2026, 8, 18)),
+          kind: 'high',
+          value: 47.2
+        }
+      },
+      event: 'price_alert',
+      planId: 'plan-1'
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+
+    expect(body.embeds[0].fields).toEqual([
+      { inline: true, name: 'Current', value: '39.98' },
+      {
+        inline: true,
+        name: 'Rule',
+        value: '≤ -15% from the 252-day high'
+      },
+      {
+        inline: false,
+        name: 'Reference',
+        value: '-15.3% from the high of 47.20 (2026-09-18)'
+      },
+      {
+        inline: false,
+        name: 'Action',
+        value: 'Buy tranches 5 and 6 of the plan'
+      }
+    ]);
   });
 
   it('converts investment signals into a Discord embed', async () => {

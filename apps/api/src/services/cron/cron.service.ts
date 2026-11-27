@@ -209,7 +209,22 @@ export class CronService {
     }
 
     const mailService = this.moduleRef.get(MailService, { strict: false });
-    await this.priceAlertService.checkAndTriggerAlertsForPlans(plans, mailService);
+    await this.priceAlertService.checkAndTriggerAlertsForPlans(plans, mailService, {
+      // PortfolioService is request-scoped, see resolveRequestScoped
+      getAverageCost: async ({ dataSource, symbol, userId }) => {
+        const portfolioService = await this.resolveRequestScoped(
+          PortfolioService,
+          userId
+        );
+        const holding = await portfolioService.getHolding({
+          dataSource,
+          symbol,
+          userId
+        });
+
+        return holding?.averagePrice;
+      }
+    });
   }
 
   private async isDataGatheringEnabled() {
