@@ -111,7 +111,15 @@ describe('McpController', () => {
       arguments: { id: '0f8fad5b-d9cb-469f-a165-70867728950e' },
       name: 'delete_price_alert'
     },
-    { arguments: { groupId: 'group-1' }, name: 'delete_allocation_group' }
+    { arguments: { groupId: 'group-1' }, name: 'delete_allocation_group' },
+    {
+      arguments: {
+        action: 'ADD',
+        activityIds: ['0f8fad5b-d9cb-469f-a165-70867728950e'],
+        tagId: 'tag-1'
+      },
+      name: 'tag_activities'
+    }
   ])('does not let an unauthenticated client call $name', async (params) => {
     apiAuthorization = 'untouched';
 

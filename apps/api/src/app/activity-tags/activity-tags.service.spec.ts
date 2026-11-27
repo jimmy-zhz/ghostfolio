@@ -20,6 +20,7 @@ describe('ActivityTagsService.updateTags', () => {
         update: jest.fn().mockResolvedValue({})
       },
       tag: {
+        create: jest.fn().mockResolvedValue({ id: 'tag-new', name: 'New' }),
         findFirst: jest.fn().mockResolvedValue(ownTag ? { id: 'tag-1' } : null)
       }
     };
@@ -124,5 +125,39 @@ describe('ActivityTagsService.updateTags', () => {
       service.updateTags({ ...request, userId: 'user-1' })
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.order.update).not.toHaveBeenCalled();
+  });
+
+  describe('createOwnTag', () => {
+    it('creates a tag of the user', async () => {
+      const { prisma, service } = setup({ ownTag: false });
+
+      await expect(
+        service.createOwnTag({ name: ' Source · Mother ', userId: 'user-1' })
+      ).resolves.toEqual({ id: 'tag-new', name: 'New' });
+      expect(prisma.tag.create).toHaveBeenCalledWith({
+        data: { name: 'Source · Mother', user: { connect: { id: 'user-1' } } },
+        select: { id: true, name: true }
+      });
+    });
+
+    it('returns the existing tag of the same name', async () => {
+      const { prisma, service } = setup();
+
+      await expect(
+        service.createOwnTag({ name: 'Source · Mother', userId: 'user-1' })
+      ).resolves.toEqual({ id: 'tag-1' });
+      expect(prisma.tag.create).not.toHaveBeenCalled();
+    });
+
+    it.each(['', ' ', 'x'.repeat(101), 42])(
+      'rejects the name %p',
+      async (name) => {
+        const { service } = setup();
+
+        await expect(
+          service.createOwnTag({ name, userId: 'user-1' })
+        ).rejects.toBeInstanceOf(BadRequestException);
+      }
+    );
   });
 });

@@ -1,6 +1,6 @@
 # ADR 0002 — MCP 只读，唯一的写入例外是 create_activity
 
-- 状态：已采纳（2026-10-15）；“唯一的写入”部分被 [ADR 0004](0004-mcp-investment-plan-writes.md) 扩展（2026-11-20）
+- 状态：已采纳（2026-10-15）；“唯一的写入”部分被 [ADR 0004](0004-mcp-investment-plan-writes.md) 扩展（2026-11-20）；“交易不能修改”有一个例外：标签，见 [ADR 0005](0005-mcp-activity-tags.md)（2026-11-27）
 - 相关：[MCP 服务端](../architecture/mcp-server.md)、[guide/mcp.md](../../guide/mcp.md)
 
 ## 背景

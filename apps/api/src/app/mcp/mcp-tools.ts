@@ -271,6 +271,13 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   },
   {
     description:
+      "Fund groups, defined by tags of activities: sources (whose money it is, e.g. a gift; every BUY/SELL/DIVIDEND has exactly one) with principal, invested, value, return, split across accounts and the gap to the principal; purposes (what the money is for, e.g. a car; none or one per activity) with target, value and progress. checks lists activities without a source or with several sources or purposes, and symbols only partly in a purpose. The user's own tags and their ids are in get_user.",
+    inputSchema: {},
+    name: 'get_fund_groups',
+    path: '/investment-plan/fund-groups'
+  },
+  {
+    description:
       'Watchlist: tracked symbols with market price, trend and performance.',
     inputSchema: {},
     name: 'get_watchlist',
@@ -462,5 +469,69 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'delete_allocation_group',
     path: '/investment-plan/allocation-group/:groupId',
     pathParams: ['groupId']
+  },
+  {
+    description: `WRITE. Create a tag of the user, e.g. "Source · Mother" for a fund source or "Purpose · Car" for a fund purpose. Returns the existing tag if one of that name exists. ${CONFIRM_FIRST}`,
+    idempotent: true,
+    inputSchema: {
+      name: z.string().trim().min(1).max(100).describe('Name of the tag')
+    },
+    method: 'POST',
+    name: 'create_tag',
+    path: '/activity-tags/tags'
+  },
+  {
+    description: `WRITE. Create or change a fund group (see get_fund_groups); with id it is changed. A SOURCE takes a principal, or isRemainder for the one source holding everything not in another source; a PURPOSE takes targetAmount and targetDate. The tag must be one of the user's own (get_user, create_tag) and not used by another group. ${CONFIRM_FIRST}`,
+    idempotent: false,
+    inputSchema: {
+      id: z
+        .uuid()
+        .optional()
+        .describe('Fund group to change, from get_fund_groups'),
+      isRemainder: z.boolean().optional().describe('SOURCE only'),
+      kind: z.enum(['SOURCE', 'PURPOSE']),
+      name: z.string().trim().min(1),
+      note: z.string().optional(),
+      principal: z
+        .number()
+        .min(0)
+        .optional()
+        .describe('SOURCE only, in the base currency'),
+      tagId: z.string().min(1).describe('Own tag, from get_user or create_tag'),
+      targetAmount: z
+        .number()
+        .min(0)
+        .optional()
+        .describe('PURPOSE only, in the base currency'),
+      targetDate: isoDate.optional().describe('PURPOSE only')
+    },
+    method: 'PUT',
+    name: 'upsert_fund_group',
+    path: '/investment-plan/fund-groups'
+  },
+  {
+    description: `WRITE, DESTRUCTIVE. Delete a fund group definition, no undo. Its activities and its tag stay as they are. Take the id from get_fund_groups. ${CONFIRM_FIRST}`,
+    inputSchema: {
+      id: z.uuid().describe('Fund group id, from get_fund_groups')
+    },
+    method: 'DELETE',
+    name: 'delete_fund_group',
+    path: '/investment-plan/fund-groups/:id',
+    pathParams: ['id']
+  },
+  {
+    description: `WRITE. Add (ADD) or remove (REMOVE) one tag on up to 100 activities; nothing else of an activity changes. Own tags only, never a system tag. To assign fund sources: list the activities to the user (date, symbol, quantity, account) and let the user say which belong to which source, never guess; an activity must end up with exactly one source tag and at most one purpose tag, so remove a wrong source tag before adding the right one. ${CONFIRM_FIRST} Afterwards call get_fund_groups and report its checks.`,
+    inputSchema: {
+      action: z.enum(['ADD', 'REMOVE']),
+      activityIds: z
+        .array(z.uuid())
+        .min(1)
+        .max(100)
+        .describe('Activity ids, from list_activities'),
+      tagId: z.string().min(1).describe('Own tag, from get_user or create_tag')
+    },
+    method: 'PUT',
+    name: 'tag_activities',
+    path: '/activity-tags'
   }
 ];

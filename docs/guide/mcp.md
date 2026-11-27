@@ -10,10 +10,12 @@ POST https://<your-host>/api/v1/mcp
 ```
 
 Everything is read-only except the tools marked as write: `create_activity`, which
-records a single transaction (there is no edit, delete or import of transactions), and
-the tools that maintain the price alerts, DCA schedules, signals and target allocation
-groups of the investment plan. The capital pool, cash buffer and reserve, growth target
-and notification settings can only be changed in the Ghostfolio UI.
+records a single transaction, `tag_activities`, which adds or removes your own tags on
+transactions (nothing else of a transaction can be edited, and there is no delete or
+import), and the tools that maintain the price alerts, DCA schedules, signals, target
+allocation groups and fund sources and purposes of the investment plan. The capital
+pool, cash buffer and reserve, growth target and notification settings can only be
+changed in the Ghostfolio UI.
 
 ## Before you connect
 
@@ -79,6 +81,10 @@ list.
 | `delete_dca_schedule` (write) | Deletes a DCA schedule |
 | `upsert_allocation_group` (write) | Creates or replaces a target allocation group |
 | `delete_allocation_group` (write) | Deletes a target allocation group |
+| `get_fund_groups` | Fund sources and purposes with their figures and checks |
+| `create_tag` (write) | Creates one of your own tags |
+| `upsert_fund_group`, `delete_fund_group` (write) | Create, change or delete a fund source or purpose |
+| `tag_activities` (write) | Adds or removes one of your own tags on up to 100 transactions |
 
 ### Recording transactions
 
@@ -92,6 +98,15 @@ A date without a time (`2026-10-20`) is recorded at noon UTC, so the web client 
 the same day in every time zone from UTC-12 to UTC+11. Midnight UTC would show as the
 day before west of UTC. With a time, the client should send the offset, for example
 `2026-10-20T11:13:58-04:00`.
+
+### Fund sources and purposes
+
+The client can help sort your transactions into fund sources (whose money it is) and
+purposes (what it is for). It lists the transactions, you say which belong where, and
+after you confirm it tags them with `tag_activities`. Only your own tags change; the
+amounts, quantities and dates of a transaction stay as they are, and system tags such as
+Exclude from Analysis cannot be set this way. Afterwards it reads the checks of
+`get_fund_groups`, for example transactions still without a source.
 
 ### Maintaining the investment plan
 

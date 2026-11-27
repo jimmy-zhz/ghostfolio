@@ -3,7 +3,7 @@ import { HasPermissionGuard } from '@ghostfolio/api/guards/has-permission.guard'
 import { permissions } from '@ghostfolio/common/permissions';
 import type { RequestWithUser } from '@ghostfolio/common/types';
 
-import { Body, Controller, Inject, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Inject, Post, Put, UseGuards } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -19,6 +19,20 @@ export class ActivityTagsController {
     private readonly activityTagsService: ActivityTagsService,
     @Inject(REQUEST) private readonly request: RequestWithUser
   ) {}
+
+  /**
+   * A tag of the signed-in user. Unlike `POST /tags` it takes no user id, so
+   * that a client like MCP cannot address anyone else
+   */
+  @HasPermission(permissions.createOwnTag)
+  @Post('tags')
+  @UseGuards(AuthGuard('jwt'), HasPermissionGuard)
+  public async createOwnTag(@Body() body: { name: string }) {
+    return this.activityTagsService.createOwnTag({
+      name: body?.name,
+      userId: this.request.user.id
+    });
+  }
 
   @HasPermission(permissions.updateActivity)
   @Put()

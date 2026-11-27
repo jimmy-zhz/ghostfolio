@@ -12,16 +12,24 @@ plan.
   replayed against the API of the same process over `127.0.0.1`, so guards,
   permissions, subscription checks and response interceptors all apply as for
   the web client.
-- **Read-only for the most part, with allowlisted writes** (ADR 0002, ADR 0004):
+- **Read-only for the most part, with allowlisted writes** (ADR 0002, ADR 0004,
+  ADR 0005):
   - `create_activity` creates one transaction (`POST /api/v1/activities`, which
     places no order), for bookkeeping from screenshots. Transactions cannot be
     edited, deleted or imported, so a wrong entry can be added but never
     silently changed or removed, and the user fixes it in the UI. It goes
     through the normal API guards, so the user needs the `createActivity`
     permission.
+  - `tag_activities` adds or removes one of the user's own tags on up to 100
+    transactions and changes nothing else (`PUT /api/v1/activity-tags`); system
+    tags are refused, and one transaction of someone else rejects the whole
+    batch. `create_tag` creates an own tag (`POST /api/v1/activity-tags/tags`,
+    which takes no user id). Together with the fund groups they let an agent
+    help assign the sources and purposes of the money.
   - The investment plan without its capital pool: price alerts (create,
     update, rearm, delete), the status of a DCA signal, DCA schedules (create,
-    update, delete) and target allocation groups (upsert, delete).
+    update, delete), target allocation groups (upsert, delete) and fund groups
+    (upsert, delete).
     `PUT /investment-plan` (capital pool, cash buffer/reserve, growth target,
     notification settings) stays UI only.
 - **The allowlist is enforced where the request is sent** (`MCP_ALLOWED_WRITES`
@@ -140,6 +148,11 @@ holdings against my investment plan".
 | `delete_dca_schedule` (write, destructive)     | `DELETE /investment-plan/dca/:id`                   |
 | `upsert_allocation_group` (write)              | `PUT /investment-plan/allocation-group`             |
 | `delete_allocation_group` (write, destructive) | `DELETE /investment-plan/allocation-group/:groupId` |
+| `get_fund_groups`                              | `GET /investment-plan/fund-groups`                  |
+| `create_tag` (write)                           | `POST /activity-tags/tags`                          |
+| `upsert_fund_group` (write)                    | `PUT /investment-plan/fund-groups`                  |
+| `delete_fund_group` (write, destructive)       | `DELETE /investment-plan/fund-groups/:id`           |
+| `tag_activities` (write)                       | `PUT /activity-tags`                                |
 
 ## Adding a tool
 
