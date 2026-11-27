@@ -34,6 +34,7 @@ import {
 import {
   assertAllocationGroupSymbols,
   toDcaScheduleUpdate,
+  toPriceAlertRuleFields,
   toPriceAlertUpdate
 } from './investment-plan.helper';
 import { InvestmentPlanService } from './investment-plan.service';
@@ -247,16 +248,21 @@ export class InvestmentPlanController {
   public async createPriceAlert(
     @Body()
     body: {
+      actionNote?: string;
       condition: AlertCondition;
       dataSource: DataSource;
+      lookbackDays?: number;
       messageTemplate: string;
       name?: string;
+      ruleType?: string;
       symbol: string;
       targetValue: number;
     }
   ) {
+    const ruleFields = toPriceAlertRuleFields(body);
     const plan = await this.getOrCreatePlan();
     return this.priceAlertService.createAlert(plan.id, {
+      ...ruleFields,
       condition: body.condition,
       dataSource: body.dataSource,
       messageTemplate: body.messageTemplate ?? '',

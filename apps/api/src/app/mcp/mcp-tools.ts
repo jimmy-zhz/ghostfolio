@@ -71,6 +71,24 @@ const alertCondition = z.enum([
   'LESS_THAN_OR_EQUAL'
 ]);
 
+const priceAlertRuleType = z
+  .enum(['PRICE', 'PCT_FROM_HIGH', 'PCT_FROM_COST', 'DAILY_CHANGE'])
+  .describe('Default PRICE, see create_price_alert');
+
+const priceAlertLookbackDays = z
+  .number()
+  .int()
+  .min(2)
+  .max(1000)
+  .optional()
+  .describe('PCT_FROM_HIGH only: trading days for the high, default 252');
+
+const priceAlertActionNote = z
+  .string()
+  .max(200)
+  .optional()
+  .describe('What to do when it fires, sent along with the notification');
+
 const dcaSignalType = z
   .enum(['FIXED', 'MA5', 'RSI', 'COMBINED'])
   .describe(
@@ -315,17 +333,22 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     path: '/activities'
   },
   {
-    description: `WRITE. Create a price alert that notifies the user (email/webhook of the plan) once the price of a symbol crosses targetValue. ${CONFIRM_FIRST} Not idempotent: calling twice creates two alerts.`,
+    description: `WRITE. Create a price alert that notifies the user (email/webhook of the plan) once the value of its rule meets the condition. ruleType PRICE compares the price with targetValue; the other rules compare a percentage, so targetValue is a percent: PCT_FROM_HIGH the change from the highest close of the last lookbackDays trading days (e.g. 15% below the 52-week high: condition LESS_THAN_OR_EQUAL, targetValue -15, lookbackDays 252), PCT_FROM_COST the change vs. the user's average cost (back at cost: GREATER_THAN_OR_EQUAL 0), DAILY_CHANGE the change vs. the previous close (fires at most once a day and stays active). Put what the user plans to do in actionNote. ${CONFIRM_FIRST} Not idempotent: calling twice creates two alerts.`,
     inputSchema: {
+      actionNote: priceAlertActionNote,
       condition: alertCondition,
       dataSource: planDataSource,
+      lookbackDays: priceAlertLookbackDays,
       messageTemplate: z
         .string()
         .optional()
         .describe('Optional text of the notification'),
       name: z.string().optional(),
+      ruleType: priceAlertRuleType.optional(),
       symbol: z.string().describe('Symbol from lookup_symbol'),
-      targetValue: z.number().positive().describe('Price threshold')
+      targetValue: z
+        .number()
+        .describe('A price for PRICE (above 0), a percent for the other rules')
     },
     method: 'POST',
     name: 'create_price_alert',
@@ -341,7 +364,13 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       messageTemplate: z.string().optional(),
       name: z.string().optional(),
       symbol: z.string().optional(),
-      targetValue: z.number().positive().optional()
+      actionNote: priceAlertActionNote,
+      lookbackDays: priceAlertLookbackDays,
+      ruleType: priceAlertRuleType.optional(),
+      targetValue: z
+        .number()
+        .optional()
+        .describe('A price for PRICE, a percent for the other rules')
     },
     method: 'PUT',
     name: 'update_price_alert',

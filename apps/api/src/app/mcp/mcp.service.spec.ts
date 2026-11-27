@@ -207,6 +207,40 @@ describe('McpService', () => {
     expect(JSON.parse(body)).toEqual({ isActive: false, targetValue: 42 });
   });
 
+  it('creates a price alert with a rule and a negative percentage', async () => {
+    responseBody = JSON.stringify({ id: ALERT_ID });
+    let body = '';
+
+    apiServer.once('request', (request) => {
+      request.on('data', (chunk) => (body += chunk));
+    });
+
+    const args = {
+      actionNote: 'Buy tranches 5 and 6',
+      condition: 'LESS_THAN_OR_EQUAL',
+      dataSource: 'YAHOO',
+      lookbackDays: 252,
+      ruleType: 'PCT_FROM_HIGH',
+      symbol: 'XUS.TO',
+      targetValue: -15
+    };
+    const result = await client.callTool({
+      arguments: args,
+      name: 'create_price_alert'
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(JSON.parse(body)).toEqual(args);
+
+    const invalid = await client.callTool({
+      arguments: { ...args, ruleType: 'MA_CROSS' },
+      name: 'create_price_alert'
+    });
+
+    expect(invalid.isError).toBe(true);
+    expect(received).toHaveLength(1);
+  });
+
   it('replays delete_dca_schedule as a DELETE without a body', async () => {
     responseBody = JSON.stringify({ success: true });
     let body = '';

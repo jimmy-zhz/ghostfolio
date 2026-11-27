@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PriceAlertRuleType, Prisma } from '@prisma/client';
 
 /**
  * An allocation group needs at least one symbol: an empty list would remove
@@ -57,15 +57,69 @@ export function toDcaScheduleUpdate(
 export function toPriceAlertUpdate(
   body: Record<string, unknown>
 ): Prisma.PriceAlertUncheckedUpdateInput {
-  return pickFields(body, [
-    'condition',
-    'dataSource',
-    'isActive',
-    'messageTemplate',
-    'name',
-    'symbol',
-    'targetValue'
-  ]) as Prisma.PriceAlertUncheckedUpdateInput;
+  return {
+    ...pickFields(body, [
+      'condition',
+      'dataSource',
+      'isActive',
+      'messageTemplate',
+      'name',
+      'symbol',
+      'targetValue'
+    ]),
+    ...toPriceAlertRuleFields(body)
+  } as Prisma.PriceAlertUncheckedUpdateInput;
+}
+
+/**
+ * The rule of a price alert, see libs/common price-alert-rule. Only the given
+ * fields, checked
+ */
+export function toPriceAlertRuleFields(body: Record<string, unknown>) {
+  const fields: {
+    actionNote?: string | null;
+    lookbackDays?: number | null;
+    ruleType?: PriceAlertRuleType;
+  } = {};
+
+  if (body?.ruleType !== undefined) {
+    if (
+      !Object.values(PriceAlertRuleType).includes(
+        body.ruleType as PriceAlertRuleType
+      )
+    ) {
+      throw new BadRequestException(
+        `ruleType must be one of ${Object.values(PriceAlertRuleType).join(', ')}`
+      );
+    }
+
+    fields.ruleType = body.ruleType as PriceAlertRuleType;
+  }
+
+  if (body?.lookbackDays !== undefined) {
+    if (
+      body.lookbackDays !== null &&
+      (!Number.isInteger(body.lookbackDays) ||
+        (body.lookbackDays as number) < 2 ||
+        (body.lookbackDays as number) > 1000)
+    ) {
+      throw new BadRequestException(
+        'lookbackDays must be a whole number from 2 to 1000'
+      );
+    }
+
+    fields.lookbackDays = body.lookbackDays as number | null;
+  }
+
+  if (body?.actionNote !== undefined) {
+    if (body.actionNote !== null && typeof body.actionNote !== 'string') {
+      throw new BadRequestException('actionNote must be a text');
+    }
+
+    fields.actionNote = (body.actionNote as string | null)?.trim() || null;
+  }
+
+  return fields;
 }
 
 function pickFields(body: Record<string, unknown>, fields: string[]) {
