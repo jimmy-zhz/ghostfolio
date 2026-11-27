@@ -22,7 +22,7 @@
 | B1  | 价格提醒第一期规则：从 N 日高点回撤、相对持仓成本、单日涨跌                                          | 3.2     |
 | B2  | 每条提醒可写“触发后做什么”，通知里附上规则、当前值、参照值和动作                                     | 3.5     |
 | B3  | 提醒界面和 MCP 支持新规则                                                                            | 3.6–3.7 |
-| C1  | 首页标签改为 Overview、Holdings、投资计划、Activities、Watchlist；Summary、Markets 移到 Portfolio    | 4       |
+| C1  | 首页标签改为 Overview、Holdings、Activities、投资计划、Watchlist；Summary、Markets 移到 Portfolio    | 4       |
 
 不做：价格提醒第二期（从低点反弹、移动止盈、均线）、用途的“来源构成”（见 2.4）、通过 MCP 修改交易的其他字段（金额、数量、日期等仍只能在界面里改）。
 
@@ -306,11 +306,11 @@ Discord embed 加“规则”“参照”“动作”三个字段。
 
 ## 4. 首页导航
 
-常用的 Overview、Holdings、投资计划、Activities 分在首页和 Portfolio 两处，手机上切换要先换区再选标签。调整为：
+常用的 Overview、Holdings、Activities、投资计划 分在首页和 Portfolio 两处，手机上切换要先换区再选标签。调整为：
 
 | 位置      | 调整前                                                   | 调整后                                               |
 | --------- | -------------------------------------------------------- | ---------------------------------------------------- |
-| 首页      | Overview、Holdings、Summary、Watchlist、Markets          | Overview、Holdings、投资计划、Activities、Watchlist  |
+| 首页      | Overview、Holdings、Summary、Watchlist、Markets          | Overview、Holdings、Activities、投资计划、Watchlist  |
 | Portfolio | 投资计划、Analysis、Activities、Allocations、FIRE、X-Ray | Analysis、Allocations、FIRE、X-Ray、Summary、Markets |
 
 - 页面本身不改，只是挂到另一个标签栏下：投资计划、Activities 的路由移到 `/home/...`，Summary、Markets 移到 `/portfolio/...`。
@@ -373,7 +373,7 @@ Discord embed 加“规则”“参照”“动作”三个字段。
 6. 建一条单日涨跌提醒，当天最多收到一次，第二天自动生效。
 7. 原有的固定价格提醒照常工作。
 8. 通过 MCP 能读资金分组、能建新规则的提醒；agent 能建标签、建分组，并在用户确认后给一批交易加上来源标签，之后 `get_fund_groups` 的检查项相应减少。
-9. 手机首页底部是 Overview、Holdings、投资计划、Activities、Watchlist；旧书签能打开。
+9. 手机首页底部是 Overview、Holdings、Activities、投资计划、Watchlist；旧书签能打开。
 10. 手机上资金分组卡片、提醒列表都不能左右滑，显示成两行。
 11. 电脑上其他页面和以前一样。
 
@@ -387,6 +387,6 @@ Discord embed 加“规则”“参照”“动作”三个字段。
 | Q4  | 价格提醒范围               | 只做第一期三种规则                                                                            |
 | Q5  | `PCT_FROM_COST` 的成本口径 | 全部账户合计                                                                                  |
 | Q6  | 补标签和开发的顺序         | 同时进行                                                                                      |
-| Q7  | 首页导航                   | 首页：Overview、Holdings、投资计划、Activities、Watchlist；Summary、Markets 移到 Portfolio    |
+| Q7  | 首页导航                   | 首页：Overview、Holdings、Activities、投资计划、Watchlist；Summary、Markets 移到 Portfolio    |
 | Q8  | 资金用途                   | 放进本迭代；按交易划分，几只股票可以组成一个用途篮子                                          |
 | Q9  | MCP 开放到什么程度         | 开放资金分组的增删改、建标签、给交易批量加或去标签（只改标签，不能用系统标签），让 agent 协助 |
