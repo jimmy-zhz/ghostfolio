@@ -7,6 +7,7 @@ import { PropertyModule } from '@ghostfolio/api/services/property/property.modul
 import { Module } from '@nestjs/common';
 
 import { DcaSignalService } from './dca-signal.service';
+import { FundGroupService } from './fund-group.service';
 import { InvestmentPlanController } from './investment-plan.controller';
 import { InvestmentPlanService } from './investment-plan.service';
 import { PriceAlertService } from './price-alert.service';
@@ -29,6 +30,7 @@ import { RebalancingService } from './rebalancing.service';
   ],
   providers: [
     DcaSignalService,
+    FundGroupService,
     InvestmentPlanService,
     PriceAlertService,
     RebalancingService

@@ -1,6 +1,7 @@
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import type { RequestWithUser } from '@ghostfolio/common/types';
 
+import { FundGroupService } from './fund-group.service';
 import { PriceAlertService } from './price-alert.service';
 import {
   RebalancingService,
@@ -40,6 +41,7 @@ import { InvestmentPlanService } from './investment-plan.service';
 @Controller('investment-plan')
 export class InvestmentPlanController {
   public constructor(
+    private readonly fundGroupService: FundGroupService,
     private readonly investmentPlanService: InvestmentPlanService,
     private readonly portfolioService: PortfolioService,
     private readonly priceAlertService: PriceAlertService,
@@ -151,6 +153,40 @@ export class InvestmentPlanController {
   public async deleteAllocationGroup(@Param('groupId') groupId: string) {
     const plan = await this.getOrCreatePlan();
     await this.investmentPlanService.deleteAllocationGroup(plan.id, groupId);
+    return { success: true };
+  }
+
+  @Get('fund-groups')
+  @UseGuards(AuthGuard('jwt'))
+  public async getFundGroups() {
+    const plan = await this.investmentPlanService.getPlanByUserId(
+      this.request.user.id
+    );
+
+    return this.fundGroupService.getReport({
+      planId: plan?.id ?? '',
+      userId: this.request.user.id
+    });
+  }
+
+  @Put('fund-groups')
+  @UseGuards(AuthGuard('jwt'))
+  public async upsertFundGroup(@Body() body: Record<string, unknown>) {
+    const plan = await this.getOrCreatePlan();
+
+    return this.fundGroupService.upsertFundGroup({
+      body,
+      planId: plan.id,
+      userId: this.request.user.id
+    });
+  }
+
+  @Delete('fund-groups/:id')
+  @UseGuards(AuthGuard('jwt'))
+  public async deleteFundGroup(@Param('id') id: string) {
+    const planId = await this.getPlanIdOfUser();
+
+    await this.fundGroupService.deleteFundGroup({ id, planId });
     return { success: true };
   }
 
