@@ -265,13 +265,17 @@ export class GfActivitiesTableComponent<
 
   public ngOnInit() {
     if (this.showCheckbox()) {
+      // The import preview starts with every activity selected
       this.toggleAllRows();
-      this.selectedRows.changed
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe((selectedRows) => {
-          this.selectedActivities.emit(selectedRows.source.selected);
-        });
     }
+
+    // Also when the checkboxes are switched on later, e.g. to edit the tags of
+    // a batch of activities
+    this.selectedRows.changed
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((selectedRows) => {
+        this.selectedActivities.emit(selectedRows.source.selected);
+      });
 
     this.typesFilter.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))

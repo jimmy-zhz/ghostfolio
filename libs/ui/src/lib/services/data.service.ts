@@ -1022,6 +1022,14 @@ export class DataService {
     return this.http.delete<any>(`/api/v1/investment-plan/price-alert/${id}`);
   }
 
+  public putActivityTags(data: {
+    action: 'ADD' | 'REMOVE';
+    activityIds: string[];
+    tagId: string;
+  }) {
+    return this.http.put<{ count: number }>('/api/v1/activity-tags', data);
+  }
+
   public fetchAiConfig() {
     return this.http.get<{
       apiKey: string;

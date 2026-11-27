@@ -15,6 +15,7 @@ import { Type as ActivityType } from '@ghostfolio/prisma/enums';
 import { GfActivitiesTableComponent } from '@ghostfolio/ui/activities-table';
 import { GfFabComponent } from '@ghostfolio/ui/fab';
 import { translate } from '@ghostfolio/ui/i18n';
+import { NotificationService } from '@ghostfolio/ui/notifications';
 import { DataService } from '@ghostfolio/ui/services';
 
 import {
@@ -23,7 +24,8 @@ import {
   Component,
   DestroyRef,
   inject,
-  OnInit
+  OnInit,
+  ViewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -63,6 +65,9 @@ import { ImportActivitiesDialogParams } from './import-activities-dialog/interfa
   templateUrl: './activities-page.html'
 })
 export class GfActivitiesPageComponent implements OnInit {
+  @ViewChild(GfActivitiesTableComponent)
+  private activitiesTable?: GfActivitiesTableComponent;
+
   protected accountOptions: { id: string; name: string }[] = [];
   protected activityTypeOptions: { key: ActivityType; label: string }[] = [];
   protected dataSource: MatTableDataSource<Activity> | undefined;
@@ -73,6 +78,12 @@ export class GfActivitiesPageComponent implements OnInit {
   protected hasPermissionToDeleteActivity: boolean;
   protected hasPermissionToUpdateActivity: boolean;
   protected holdingOptions: { symbol: string; name: string }[] = [];
+  // Editing the tags of a batch of activities, e.g. the tag of a fund source
+  protected isEditingTags = false;
+  protected isUpdatingTags = false;
+  protected ownTags: { id: string; name: string }[] = [];
+  protected selectedActivities: Activity[] = [];
+  protected selectedTagId: string | undefined;
   protected readonly internalRoutes = internalRoutes;
   protected pageIndex = 0;
   protected readonly pageSize = DEFAULT_PAGE_SIZE;
@@ -93,6 +104,7 @@ export class GfActivitiesPageComponent implements OnInit {
   private readonly impersonationStorageService = inject(
     ImpersonationStorageService
   );
+  private readonly notificationService = inject(NotificationService);
   private readonly router = inject(Router);
   private readonly userService = inject(UserService);
 
@@ -164,7 +176,64 @@ export class GfActivitiesPageComponent implements OnInit {
       });
   }
 
+  protected get canEditTags() {
+    return (
+      this.hasPermissionToUpdateActivity &&
+      !this.hasImpersonationId &&
+      this.ownTags.length > 0
+    );
+  }
+
+  protected onSelectedActivities(activities: Activity[]) {
+    this.selectedActivities = activities;
+  }
+
+  protected onToggleEditTags() {
+    this.isEditingTags = !this.isEditingTags;
+    this.clearSelection();
+  }
+
+  protected onUpdateTags(action: 'ADD' | 'REMOVE') {
+    const activityIds = this.selectedActivities
+      .map(({ id }) => {
+        return id;
+      })
+      .filter((id): id is string => {
+        return !!id;
+      });
+
+    if (!this.selectedTagId || activityIds.length === 0) {
+      return;
+    }
+
+    this.isUpdatingTags = true;
+
+    this.dataService
+      .putActivityTags({ action, activityIds, tagId: this.selectedTagId })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => {
+          this.isUpdatingTags = false;
+
+          this.notificationService.alert({
+            title: $localize`The tags could not be updated.`
+          });
+
+          this.changeDetectorRef.markForCheck();
+        },
+        next: () => {
+          this.isUpdatingTags = false;
+          this.clearSelection();
+
+          this.fetchActivities();
+        }
+      });
+  }
+
   protected onChangePage(page: PageEvent) {
+    // A selection never spans pages
+    this.clearSelection();
+
     this.pageIndex = page.pageIndex;
 
     this.fetchActivities();
@@ -409,6 +478,11 @@ export class GfActivitiesPageComponent implements OnInit {
       });
   }
 
+  private clearSelection() {
+    this.activitiesTable?.selectedRows.clear();
+    this.selectedActivities = [];
+  }
+
   private getDateRange() {
     const dateRange = this.user?.settings?.dateRange;
 
@@ -438,5 +512,18 @@ export class GfActivitiesPageComponent implements OnInit {
       hasPermission(this.user.permissions, permissions.updateActivity) &&
       hasScope(this.user.scopes, scopes.activityUpdate) &&
       !this.user.settings?.isRestrictedView;
+
+    // System tags (Draft, Exclude from Analysis, ...) change how an activity
+    // is treated and are left to the activity dialog
+    this.ownTags = (this.user.tags ?? [])
+      .filter(({ userId }) => {
+        return userId === this.user.id;
+      })
+      .map(({ id, name }) => {
+        return { id, name };
+      })
+      .sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
   }
 }
