@@ -20,8 +20,8 @@ import {
   albumsOutline,
   analyticsOutline,
   bookmarkOutline,
-  newspaperOutline,
-  readerOutline
+  calendarOutline,
+  swapVerticalOutline
 } from 'ionicons/icons';
 
 @Component({
@@ -60,20 +60,24 @@ export class GfHomePageComponent implements OnInit {
               label: internalRoutes.home.subRoutes.holdings.title,
               routerLink: internalRoutes.home.subRoutes.holdings.routerLink
             },
+            // Fork: activities and the investment plan instead of summary and
+            // markets, which moved to the portfolio
             {
-              iconName: 'reader-outline',
-              label: internalRoutes.home.subRoutes.summary.title,
-              routerLink: internalRoutes.home.subRoutes.summary.routerLink
+              iconName: 'swap-vertical-outline',
+              label: internalRoutes.portfolio.subRoutes.activities.title,
+              routerLink:
+                internalRoutes.portfolio.subRoutes.activities.routerLink
+            },
+            {
+              iconName: 'calendar-outline',
+              label: internalRoutes.portfolio.subRoutes.investmentPlan.title,
+              routerLink:
+                internalRoutes.portfolio.subRoutes.investmentPlan.routerLink
             },
             {
               iconName: 'bookmark-outline',
               label: internalRoutes.home.subRoutes.watchlist.title,
               routerLink: internalRoutes.home.subRoutes.watchlist.routerLink
-            },
-            {
-              iconName: 'newspaper-outline',
-              label: internalRoutes.home.subRoutes.markets.title,
-              routerLink: internalRoutes.home.subRoutes.markets.routerLink
             }
           ];
         }
@@ -85,8 +89,8 @@ export class GfHomePageComponent implements OnInit {
       albumsOutline,
       analyticsOutline,
       bookmarkOutline,
-      newspaperOutline,
-      readerOutline
+      calendarOutline,
+      swapVerticalOutline
     });
   }
 

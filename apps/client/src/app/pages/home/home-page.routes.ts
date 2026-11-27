@@ -1,10 +1,9 @@
 import { GfHomeHoldingsComponent } from '@ghostfolio/client/components/home-holdings/home-holdings.component';
 import { GfHomeOverviewComponent } from '@ghostfolio/client/components/home-overview/home-overview.component';
-import { GfHomeSummaryComponent } from '@ghostfolio/client/components/home-summary/home-summary.component';
 import { GfHomeWatchlistComponent } from '@ghostfolio/client/components/home-watchlist/home-watchlist.component';
 import { GfWatchlistDialogHostComponent } from '@ghostfolio/client/components/home-watchlist/watchlist-dialog-host/watchlist-dialog-host.component';
-import { GfMarketsComponent } from '@ghostfolio/client/components/markets/markets.component';
 import { AuthGuard } from '@ghostfolio/client/core/auth.guard';
+import { redirectKeepingQueryParams } from '@ghostfolio/client/util/route.util';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 
 import { Routes } from '@angular/router';
@@ -24,15 +23,31 @@ export const routes: Routes = [
         component: GfHomeHoldingsComponent,
         title: internalRoutes.home.subRoutes.holdings.title
       },
+      // Fork: activities and the investment plan moved here from the
+      // portfolio, summary and markets moved there
       {
-        path: internalRoutes.home.subRoutes.summary.path,
-        component: GfHomeSummaryComponent,
-        title: internalRoutes.home.subRoutes.summary.title
+        path: internalRoutes.portfolio.subRoutes.activities.path,
+        loadChildren: () =>
+          import('../portfolio/activities/activities-page.routes').then(
+            (m) => m.routes
+          )
+      },
+      {
+        path: internalRoutes.portfolio.subRoutes.investmentPlan.path,
+        loadChildren: () =>
+          import('../portfolio/investment-plan/investment-plan-page.routes').then(
+            (m) => m.routes
+          )
       },
       {
         path: internalRoutes.home.subRoutes.markets.path,
-        component: GfMarketsComponent,
-        title: internalRoutes.home.subRoutes.markets.title
+        pathMatch: 'full',
+        redirectTo: redirectKeepingQueryParams(() => ['/portfolio', 'markets'])
+      },
+      {
+        path: internalRoutes.home.subRoutes.summary.path,
+        pathMatch: 'full',
+        redirectTo: redirectKeepingQueryParams(() => ['/portfolio', 'summary'])
       },
       {
         children: [

@@ -143,14 +143,16 @@ export const internalRoutes = {
         routerLink: ['/home', 'holdings'],
         title: $localize`Holdings`
       },
+      // Fork: shown on the tabs of the portfolio, see portfolio-page.routes.ts
       markets: {
         path: 'markets',
-        routerLink: ['/home', 'markets'],
+        routerLink: ['/portfolio', 'markets'],
         title: $localize`Markets`
       },
+      // Fork: shown on the tabs of the portfolio, see portfolio-page.routes.ts
       summary: {
         path: 'summary',
-        routerLink: ['/home', 'summary'],
+        routerLink: ['/portfolio', 'summary'],
         title: $localize`Summary`
       },
       watchlist: {
@@ -178,26 +180,27 @@ export const internalRoutes = {
     path: 'portfolio',
     routerLink: ['/portfolio'],
     subRoutes: {
+      // Fork: shown on the tabs of home, see home-page.routes.ts
       activities: {
         path: 'activities',
-        routerLink: ['/portfolio', 'activities'],
+        routerLink: ['/home', 'activities'],
         subRoutes: {
           clone: {
             path: 'clone',
             routerLink: (aActivityId: string) => {
-              return ['/portfolio', 'activities', aActivityId, 'clone'];
+              return ['/home', 'activities', aActivityId, 'clone'];
             },
             title: $localize`Clone Activity`
           },
           create: {
             path: 'create',
-            routerLink: ['/portfolio', 'activities', 'create'],
+            routerLink: ['/home', 'activities', 'create'],
             title: $localize`Add Activity`
           },
           update: {
             path: 'update',
             routerLink: (aActivityId: string) => {
-              return ['/portfolio', 'activities', aActivityId, 'update'];
+              return ['/home', 'activities', aActivityId, 'update'];
             },
             title: $localize`Update Activity`
           }
@@ -219,9 +222,10 @@ export const internalRoutes = {
         routerLink: ['/portfolio', 'fire'],
         title: 'FIRE'
       },
+      // Fork: shown on the tabs of home, see home-page.routes.ts
       investmentPlan: {
         path: 'investment-plan',
-        routerLink: ['/portfolio', 'investment-plan'],
+        routerLink: ['/home', 'investment-plan'],
         title: $localize`Investment Plan`
       },
       xRay: {
